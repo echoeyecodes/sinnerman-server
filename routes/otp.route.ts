@@ -5,7 +5,6 @@ import User from "../models/User";
 import { mailPublisher } from "../pubsubs/publishers";
 import { deleteUserCacheByEmail } from "../utils/cacheManager";
 import generalRequestMiddleware from "../utils/generalRequestValidator";
-import generateOTP from "../utils/generateOTP";
 import { generateToken } from "../utils/token";
 const client = redis.createClient();
 const router = express();
@@ -24,10 +23,9 @@ router.post("/verify", validateOtpRequest('verify'), generalRequestMiddleware, a
       return res.status(400).send("Invalid OTP");
     }
 
-
     const user = await User.findOne({ where: { email } });
     if (user) {
-      await user.update({ isVerified: true });
+      await user.update({ is_verified: true });
       const token = generateToken(user.get().id.toString());
       await deleteUserCacheByEmail(email);
       return res.status(200).send({ token });
@@ -48,7 +46,7 @@ router.post("/", validateOtpRequest('create'), generalRequestMiddleware, async (
 
   await mailPublisher(email)
 
-  res.status(204).send("ok")
+  res.status(200).send("ok")
 });
 
 

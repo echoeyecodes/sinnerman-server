@@ -3,13 +3,11 @@ import RequestInterface from "../CustomInterfaces/RequestInterface";
 import { validateAuthRequest, validateUsernameExists } from "../middlewares/auth.middleware";
 import User from "../models/User";
 import bcrypt from "bcryptjs";
-import axios from "axios";
 import { generateToken } from "../utils/token";
 import verifyPassword from "../utils/verifyPassword";
 import generalRequestMiddleware from "../utils/generalRequestValidator";
 import generateOTP from "../utils/generateOTP";
 import generateID from "../utils/generateID";
-import { mailPublisher } from "../pubsubs/publishers";
 import { generateOTPMicroservice } from "../microservices/otpMicroServiceContollers";
 const router = express.Router();
 
@@ -82,7 +80,7 @@ router.post(
 
       await generateOTPMicroservice(email);
 
-      res.status(202).send("ok");
+      res.status(200).send("ok");
     } catch (error) {
       res.status(500).send("An error occured. Please try again");
       throw error;

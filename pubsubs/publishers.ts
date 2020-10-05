@@ -1,6 +1,7 @@
 import generateOTP from "../utils/generateOTP";
 import pubsub from "../utils/pubusbSingleton";
 import redis from "redis";
+import { createUserCacheByEmail } from "../utils/cacheManager";
 
 const client = redis.createClient();
 
@@ -8,7 +9,7 @@ async function mailPublisher(email: string) {
   const otp = generateOTP();
   console.warn("OTP IS " + otp);
 
-  client.hmset(`${email}`, { otp });
+  await createUserCacheByEmail(email, otp)
   const data = JSON.stringify({ email, otp });
 
   const buffer = Buffer.from(data);

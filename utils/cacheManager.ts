@@ -1,12 +1,23 @@
 import redis from "redis";
-import {promisify} from 'util'
+import { promisify } from "util";
 
-const client = redis.createClient()
+const client = redis.createClient();
 
-async function deleteUserCacheByEmail(email : string){
-    return promisify(() =>{
-        client.del(`${email}`)
-    }).bind(client)
+async function deleteUserCacheByEmail(email: string) {
+  promisify(() => {
+    client.DEL(`${email}`);
+  })().catch((error) => {
+    console.log("error");
+  });
 }
 
-export {deleteUserCacheByEmail}
+async function createUserCacheByEmail(email: string, otp: string) {
+    promisify(() => {
+        client.hmset(`${email}`, { otp });
+    })().catch((error) => {
+      console.log("error");
+    });
+  }
+
+  
+export { deleteUserCacheByEmail, createUserCacheByEmail };
