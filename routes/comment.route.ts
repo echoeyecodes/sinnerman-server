@@ -12,7 +12,7 @@ router.post("/", validateCommentRequest('add'), generalRequestMiddleware, async 
     try{
         const new_comment = Comment.build({comment, video_id, user_id})
         await new_comment.save()
-        res.status(202).send(new_comment.toJSON())
+        res.status(200).send(new_comment.toJSON())
         console.log(new_comment.toJSON())
     }catch(error){
         console.log(error)
@@ -35,7 +35,7 @@ router.get("/:id", validateCommentRequest('one'), generalRequestMiddleware, asyn
             video_id: id
         }})
 
-        res.status(202).send(comments)
+        res.status(200).send(comments)
         console.log(comments)
     }catch(error){
         console.log(error)

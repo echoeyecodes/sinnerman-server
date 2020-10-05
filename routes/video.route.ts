@@ -63,7 +63,7 @@ router.post("/", validateVideoRequest('add'), generalRequestMiddleware, async (r
     try{
         const video = Video.build({title, description, video_url, user_id})
         await video.save()
-        res.status(202).send(video.toJSON())
+        res.status(200).send(video.toJSON())
         console.log(video.toJSON())
     }catch(error){
         res.status(500).send("Could not upload video. Please try again")
@@ -80,7 +80,7 @@ router.get("/:id", validateVideoRequest('one'), generalRequestMiddleware, async 
     try{
         const video = await Video.findOne({where: {id}})
         if(video == null){
-            res.status(204).send("Video not found")
+            res.status(404).send("Video not found")
             return
         }
         Object.assign(payload, {video: video.get()})
@@ -94,7 +94,7 @@ router.get("/:id", validateVideoRequest('one'), generalRequestMiddleware, async 
    const [data, like_count] : [ServiceResponse, string] =  await Promise.all([fetchUserFromService(user_id, api_key, token), fetchLikeCountFromService(id, api_key, token)])
 
         Object.assign(payload, {user: data, like_count})
-        res.status(202).send(payload)
+        res.status(200).send(payload)
     }catch(error){
         res.status(500).send("Could not get video. Please try again")
         throw error
@@ -113,7 +113,7 @@ router.get("/", async (req: RequestInterface, res: Response) =>{
     
     try{
         const videos = await Video.findAll({offset: parseInt(offset), limit: parseInt(limit)})
-        res.status(202).send(videos)
+        res.status(200).send(videos)
     }catch(error){
         res.status(500).send("Could not fetch videos. Please try")
         throw error

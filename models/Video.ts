@@ -5,6 +5,7 @@ import { Deferrable } from 'sequelize'
 import Comment from './Comment'
 import Like from './Like'
 import { Model } from 'sequelize'
+import UploadNotification from './UploadNotification'
 
 const instance = PoolSingleton.getInstance()
 class Video extends Model{}
@@ -46,6 +47,8 @@ Video.hasMany(Like, {
 })
 Comment.belongsTo(Video)
 Like.belongsTo(Video)
+Video.hasMany(UploadNotification)
+UploadNotification.belongsTo(Video)
 
 
 export default Video

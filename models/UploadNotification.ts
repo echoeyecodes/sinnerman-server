@@ -4,9 +4,9 @@ import { Model } from 'sequelize'
 
 const instance = PoolSingleton.getInstance()
 
-class Comment extends Model{}
+class UploadNotification extends Model{}
 
-Comment.init({
+UploadNotification.init({
     id:{
         type: DataTypes.UUID,
         allowNull: false,
@@ -14,19 +14,21 @@ Comment.init({
         defaultValue: DataTypes.UUIDV4,
         unique: true
     },
-    comment:{
-        type: DataTypes.TEXT,
-        allowNull: false 
+    is_read:{
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false      
+    },
+    thumbnail:{
+        type: DataTypes.STRING,
+        allowNull: false,
     }
-    
-
 }, {
     sequelize: instance,
-    modelName: "comments",
-    tableName: 'comments',
+    modelName: "upload_notifications",
+    tableName: 'upload_notifications',
     timestamps:true,
     createdAt: true,
     updatedAt: true
 })
-
-export default Comment
+export default UploadNotification
