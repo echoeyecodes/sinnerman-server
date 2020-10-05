@@ -24,7 +24,6 @@ router.post("/verify", validateOtpRequest('verify'), generalRequestMiddleware, a
       return res.status(400).send("Invalid OTP");
     }
 
-    console.log("hold right here")
 
     const user = await User.findOne({ where: { email } });
     if (user) {

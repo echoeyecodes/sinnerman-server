@@ -9,7 +9,7 @@ async function mailPublisher(email: string) {
   console.warn("OTP IS " + otp);
 
   client.hmset(`${email}`, { otp });
-  const data = JSON.stringify({ email: otp });
+  const data = JSON.stringify({ email, otp });
 
   const buffer = Buffer.from(data);
   try {
