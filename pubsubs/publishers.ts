@@ -1,9 +1,6 @@
 import generateOTP from "../utils/generateOTP";
 import pubsub from "../utils/pubusbSingleton";
-import redis from "redis";
 import { createUserCacheByEmail } from "../utils/cacheManager";
-
-const client = redis.createClient();
 
 async function mailPublisher(email: string) {
   const otp = generateOTP();
