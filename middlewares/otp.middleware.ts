@@ -1,8 +1,4 @@
-import { NextFunction, Request, Response } from "express";
-import { body, header } from "express-validator";
-import jwt from "jsonwebtoken";
-import { JWT_KEY } from "../constants/jwt.key";
-import RequestInterface from "../CustomInterfaces/RequestInterface";
+import { body } from "express-validator";
 
 type OTP_Request = "verify" | "create"
 

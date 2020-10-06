@@ -36,13 +36,7 @@ router.post("/verify", validateOtpRequest('verify'), generalRequestMiddleware, a
 
 router.post("/", validateOtpRequest('create'), generalRequestMiddleware, async (req: Request, res: Response, next:NextFunction) => {
   const { email } = req.body;
-
   //pubsub function for sending the otp
-  client.hgetall(`${email}`, (err, result) => {
-    if (result) {
-      deleteUserCacheByEmail(email);
-    }
-  });
 
   await mailPublisher(email)
 

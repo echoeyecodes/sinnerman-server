@@ -40,8 +40,8 @@ export default function otpMailSubscriber() {
   const subscription = pubsub.subscription("user_registered");
 
   const handler = (message: any) => {
-    const t = message.data.toString();
-    const payload = JSON.parse(t);
+    const data = message.data.toString();
+    const payload = JSON.parse(data);
     console.log({ payload });
     setTimeout(async () => {
       //do async work here like sending mail
