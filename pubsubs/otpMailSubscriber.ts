@@ -39,14 +39,13 @@ async function sendMail(otp: string, email: string) {
 export default function otpMailSubscriber() {
   const subscription = pubsub.subscription("user_registered");
 
-  const handler = (message: any) => {
+  const handler = async (message: any) => {
     const data = message.data.toString();
     const payload = JSON.parse(data);
     console.log({ payload });
-    setTimeout(async () => {
-      //do async work here like sending mail
-      await sendMail(payload.otp, payload.email);
-    }, 5000);
+
+    //do async work here like sending mail
+    await sendMail(payload.otp, payload.email);
     message.ack();
   };
 
