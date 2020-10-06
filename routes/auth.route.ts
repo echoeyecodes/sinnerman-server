@@ -21,7 +21,7 @@ router.post(
     try {
       const user = await User.findOne({
         where: { username },
-        attributes: ["id", "username", "password", "email"],
+        attributes: ["id", "username", "password", "email", "is_verified"],
       });
       if (!user) {
         res.status(404).send("User not found");
@@ -34,6 +34,7 @@ router.post(
           return;
         }
         const uid = generateID();
+        console.log({is_verified})
         if (!is_verified) {
           await generateOTPMicroservice(email);
           return res.status(202).send({ uid });
