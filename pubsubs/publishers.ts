@@ -6,7 +6,7 @@ async function mailPublisher(email: string) {
   const otp = generateOTP();
   console.warn("OTP IS " + otp);
 
-  await createUserCacheByEmail(email, otp)
+  await createUserCacheByEmail(email, otp);
   const data = JSON.stringify({ email, otp });
 
   const buffer = Buffer.from(data);
@@ -18,4 +18,24 @@ async function mailPublisher(email: string) {
   }
 }
 
-export { mailPublisher };
+async function uploadNotificationPublisher(
+  video_id: string,
+  video_url: string
+) {
+  const thumbnail = video_url
+    .split(/\.(?=[^\.]+$)/)
+    .shift()
+    ?.concat(".jpg");
+  const payload = { video_id, thumbnail };
+
+  const buffer = Buffer.from(JSON.stringify(payload));
+
+  try {
+    const messageId = await pubsub.topic("add_upload_notification").publish(buffer);
+    console.log({ messageId });
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+export { mailPublisher, uploadNotificationPublisher };

@@ -45,6 +45,11 @@ Video.hasMany(Comment, {
 Video.hasMany(Like, {
     foreignKey: "video_id"
 })
+
+Video.hasMany(UploadNotification, {
+    foreignKey: "video_id"
+})
+
 Comment.belongsTo(Video)
 Like.belongsTo(Video)
 Video.hasMany(UploadNotification)

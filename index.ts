@@ -8,6 +8,7 @@ import videoRoute from './routes/video.route'
 import commentRoute from './routes/comment.route'
 import likeRoute from './routes/like.route'
 import otpMailSubscriber from './pubsubs/otpMailSubscriber'
+import uploadNotificationSubscriber from './pubsubs/uploadNotificationSubscriber'
 import { validateHeaders, validateToken, validateTokenMiddleware } from './middlewares/auth.middleware'
 import generalRequestMiddleware from './utils/generalRequestValidator'
 const app = express()
@@ -28,4 +29,5 @@ app.use("/api/v1/like", likeRoute)
 app.listen(PORT, () =>{
     console.log(`Server started on port ${PORT}`)
     otpMailSubscriber()
+    uploadNotificationSubscriber()
 })
