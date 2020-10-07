@@ -3,27 +3,29 @@ import { Op } from "sequelize";
 import RequestInterface from "../CustomInterfaces/RequestInterface";
 import { validateLikeRequest } from "../middlewares/like.middleware";
 import Like from "../models/Like";
+import LikeController from "../controllers/like.controller";
 import generalRequestMiddleware from "../utils/generalRequestValidator";
 const router = express.Router();
 
+const like_controller = new LikeController();
 router.post(
   "/",
   validateLikeRequest("add"),
   generalRequestMiddleware,
   async (req: RequestInterface, res: Response) => {
     const { video_id } = req.body;
-    const {type} = <{type:string}> req.query;
+    const { type } = <{ type: string }>req.query;
     const user_id = req.id;
 
     try {
       if (parseInt(type) == 0) {
-        await Like.findOrCreate({
-          where: { [Op.and]: [{ user_id }, { video_id }] },
-          defaults: { video_id, user_id },
-        });
+        await like_controller.findOrCreate(
+          { [Op.and]: [{ user_id }, { video_id }] },
+          { video_id, user_id }
+        );
       } else {
-        await Like.destroy({
-          where: { [Op.and]: [{ user_id }, { video_id }] },
+        await like_controller.destroy({
+          [Op.and]: [{ user_id }, { video_id }],
         });
       }
       res.status(202).send("done");
@@ -42,7 +44,7 @@ router.get(
     const { id } = req.params;
 
     try {
-      const likes = await Like.findAll({ where: { video_id: id } });
+      const likes = await like_controller.findAllByAttributes({ video_id: id });
       res.status(200).send(`${likes.length}`);
     } catch (error) {
       res.status(500).send("Could not fetch likes");
@@ -50,6 +52,5 @@ router.get(
     }
   }
 );
-
 
 export default router;

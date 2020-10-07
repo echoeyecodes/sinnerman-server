@@ -1,11 +1,13 @@
 import express, { NextFunction, Request, Response } from "express";
 import redis from "redis";
 import { validateOtpRequest } from "../middlewares/otp.middleware";
-import User from "../models/User";
 import { mailPublisher } from "../pubsubs/publishers";
 import { deleteUserCacheByEmail } from "../utils/cacheManager";
 import generalRequestMiddleware from "../utils/generalRequestValidator";
 import { generateToken } from "../utils/token";
+import UserController from '../controllers/user.controller'
+
+const user_controller = new UserController()
 const client = redis.createClient();
 const router = express();
 
@@ -23,12 +25,12 @@ router.post("/verify", validateOtpRequest('verify'), generalRequestMiddleware, a
       return res.status(400).send("Invalid OTP");
     }
 
-    const user = await User.findOne({ where: { email } });
+    const user = await user_controller.findOneByAttributes({email})
     if (user) {
-      await user.update({ is_verified: true });
-      const token = generateToken(user.get().id.toString());
+      user_controller.updateOneByAttributes({is_verified:true}, {email})
+      const token = generateToken(user.id);
       await deleteUserCacheByEmail(email);
-      return res.status(200).send({ token });
+      return res.status(200).json({ token });
     }
     return res.status(404).send("User not found");
   });

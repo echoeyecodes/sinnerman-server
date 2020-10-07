@@ -9,6 +9,9 @@ import generalRequestMiddleware from "../utils/generalRequestValidator";
 import generateOTP from "../utils/generateOTP";
 import generateID from "../utils/generateID";
 import { generateOTPMicroservice } from "../microservices/otpMicroServiceContollers";
+import UserController from "../controllers/user.controller";
+
+const user_controller = new UserController()
 const router = express.Router();
 
 router.post(
@@ -19,20 +22,21 @@ router.post(
     const { username } = req.body;
 
     try {
-      const user = await User.findOne({
-        where: { username },
-        attributes: ["id", "username", "password", "email", "is_verified"],
-      });
+      const user = await user_controller.findOneByAttributes({username})
       if (!user) {
         res.status(404).send("User not found");
       } else {
-        const { id, password, is_verified, email } = user.get();
+        
+        const { id, password, is_verified, email } = user;
 
         const isPasswordCorrect = verifyPassword(req.body.password, password);
+
         if (!isPasswordCorrect) {
           res.status(400).send("Invalid password");
           return;
         }
+
+        
         const uid = generateID();
         console.log({is_verified})
         if (!is_verified) {
@@ -72,9 +76,8 @@ router.post(
 
       //send verification email here with pubsub
 
-      const user = User.build(payload);
-      await user.save();
-      console.log(user.toJSON());
+      const user = await user_controller.create(payload)
+      console.log(user);
 
       await generateOTPMicroservice(email);
 
