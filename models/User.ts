@@ -5,6 +5,7 @@ import { Model } from 'sequelize'
 import Like from './Like'
 import Comment from './Comment'
 import UploadNotification from './UploadNotification'
+import View from './View'
 
 const instance = PoolSingleton.getInstance()
 
@@ -58,6 +59,10 @@ User.hasMany(Video, {
     foreignKey: "user_id"
 })
 
+User.hasMany(View, {
+    foreignKey: "user_id"
+})
+
 User.hasMany(Like, {
     foreignKey: "user_id"
 })
@@ -72,6 +77,7 @@ User.hasMany(UploadNotification, {
 
 UploadNotification.belongsTo(User)
 Comment.belongsTo(User)
+View.belongsTo(User)
 Like.belongsTo(User)
 Video.belongsTo(User)
 
