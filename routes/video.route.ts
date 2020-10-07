@@ -16,12 +16,14 @@ import {
 } from "cloudinary";
 import { uploadNotificationPublisher } from "../pubsubs/publishers";
 import VideoController from "../controllers/video.controller";
+import ViewController from "../controllers/view.controller";
 import UserController from "../controllers/user.controller";
 import LikeController from "../controllers/like.controller";
 
 const like_controller = new LikeController()
 const video_controller = new VideoController();
 const user_controller = new UserController()
+const view_controller = new ViewController()
 
 const router = express.Router();
 cloudinary.config(cloudinary_config);
@@ -111,8 +113,9 @@ router.get(
 
       const user = await user_controller.findOneByAttributes({id: user_id})
       const likes = await like_controller.findAllByFilter({video_id: id})
+      const views = await view_controller.findAllByFilter({video_id: id})
 
-      Object.assign(payload, {user, like_count:likes.length });
+      Object.assign(payload, {user, like_count:likes.length, views: views.length });
       res.status(200).send(payload);
     } catch (error) {
       res.status(500).send("Could not get video. Please try again");
@@ -130,8 +133,19 @@ router.get("/", async (req: RequestInterface, res: Response) => {
   const { limit = "20", offset = "0" } = <Params>req.query;
 
   try {
-    const videos = await video_controller.findAllByPagination({limit: parseInt(limit), offset: parseInt(offset)})
-    res.status(200).send(videos);
+    const all_videos = await video_controller.findAllByPagination({limit: parseInt(limit), offset: parseInt(offset)})
+
+    const videos = await Promise.all(all_videos.map(async (video) => {
+      const user = await user_controller.findOneByAttributes({id: video.user_id})
+      const likes = await like_controller.findAllByFilter({video_id: video.id})
+      const views = await view_controller.findAllByFilter({video_id: video.id})
+
+      const data = {video, user,likes:likes.length, views: views.length}
+
+      return data
+    }))
+
+    res.status(200).json(videos);
   } catch (error) {
     res.status(500).send("Could not fetch videos. Please try");
     throw error;
