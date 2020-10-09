@@ -6,7 +6,7 @@ const client = redis.createClient();
 async function deleteUserCacheByEmail(email: string) {
   promisify(() => {
     client.DEL(`${email}`);
-  })().catch(console.log);
+  }).bind(client)
 }
 
 async function deleteUserEmailFromCache(email: string) {
@@ -16,14 +16,21 @@ async function deleteUserEmailFromCache(email: string) {
         deleteUserCacheByEmail(email);
       }
     });
-  })().catch(console.log);
+  }).bind(client)()
 }
+
+async function addUserEMailToCache(email: string, otp:string) {
+  promisify(() => {
+    client.hmset(`${email}`, { otp });
+  }).bind(client)()
+}
+
 
 async function createUserCacheByEmail(email: string, otp: string) {
   promisify(async () => {
     await deleteUserEmailFromCache(email);
-    client.hmset(`${email}`, { otp });
-  })().catch(console.log);
+    await addUserEMailToCache(email, otp)
+  }).bind(client)()
 }
 
 export { deleteUserCacheByEmail, createUserCacheByEmail };
