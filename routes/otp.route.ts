@@ -25,9 +25,9 @@ router.post("/verify", validateOtpRequest('verify'), generalRequestMiddleware, a
       return res.status(400).send("Invalid OTP");
     }
 
-    const user = await user_controller.findOneByAttributes({email})
+    const user = await user_controller.findOne({where:{email}})
     if (user) {
-      user_controller.updateOneByAttributes({is_verified:true}, {email})
+      user_controller.updateOne({is_verified:true}, {where:{email}})
       const token = generateToken(user.id);
       await deleteUserCacheByEmail(email);
       return res.status(200).json({ token });

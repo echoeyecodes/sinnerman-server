@@ -19,13 +19,13 @@ router.post(
 
     try {
       if (parseInt(type) == 0) {
-        await like_controller.findOrCreate(
-          { [Op.and]: [{ user_id }, { video_id }] },
-          { video_id, user_id }
-        );
+        await like_controller.findOrCreate({
+          where: { [Op.and]: [{ user_id }, { video_id }] },
+          defaults: { video_id, user_id },
+        });
       } else {
         await like_controller.destroy({
-          [Op.and]: [{ user_id }, { video_id }],
+          where: { [Op.and]: [{ user_id }, { video_id }] },
         });
       }
       res.status(202).send("done");
@@ -44,7 +44,7 @@ router.get(
     const { id } = req.params;
 
     try {
-      const likes = await like_controller.findAllByAttributes({ video_id: id });
+      const likes = await like_controller.findAll({ where: { video_id: id } });
       res.status(200).send(`${likes.length}`);
     } catch (error) {
       res.status(500).send("Could not fetch likes");

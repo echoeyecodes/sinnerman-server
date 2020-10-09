@@ -22,7 +22,7 @@ router.post(
     const { username } = req.body;
 
     try {
-      const user = await user_controller.findOneByAttributes({username})
+      const user = await user_controller.findOne({where:{username}})
       if (!user) {
         res.status(404).send("User not found");
       } else {

@@ -12,13 +12,15 @@ export default function uploadNotificationSubscriber() {
 
     try {
       const users = await User.findAll();
-      users.map(async (user) => {
-        const new_payload = Object.assign({}, payload, {
-          user_id: user.get().id,
-        });
-        const notification = UploadNotification.build(new_payload);
-        await notification.save();
-      });
+      await Promise.all(
+        users.map(async (user) => {
+          const new_payload = Object.assign({}, payload, {
+            user_id: user.get().id,
+          });
+          const notification = UploadNotification.build(new_payload);
+          await notification.save();
+        })
+      );
       message.ack();
     } catch (error) {
       throw new Error(error);

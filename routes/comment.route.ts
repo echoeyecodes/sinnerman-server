@@ -44,7 +44,7 @@ router.get(
     const { limit = "20", offset = "0" } = <Params>req.query;
 
     try {
-      const comments = await comment_controller.findAllByPaginationFilter({
+      const comments = await comment_controller.findAll({
         offset: parseInt(offset),
         limit: parseInt(limit),
         where: {

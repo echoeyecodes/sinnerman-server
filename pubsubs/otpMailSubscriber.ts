@@ -45,8 +45,12 @@ export default function otpMailSubscriber() {
     console.log({ payload });
 
     //do async work here like sending mail
-    await sendMail(payload.otp, payload.email);
-    message.ack();
+    try {
+      await sendMail(payload.otp, payload.email);
+      message.ack();
+    } catch (error) {
+      throw new Error("Could not start subscription");
+    }
   };
 
   subscription.on("message", handler);
