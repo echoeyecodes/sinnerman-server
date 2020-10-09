@@ -4,9 +4,9 @@ import { Model } from 'sequelize'
 
 const instance = PoolSingleton.getInstance()
 
-class Like extends Model{}
+class Tag extends Model{}
 
-Like.init({
+Tag.init({
     id:{
         type: DataTypes.UUID,
         allowNull: false,
@@ -14,13 +14,17 @@ Like.init({
         defaultValue: DataTypes.UUIDV4,
         unique: true
     },
+    name:{
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
 }, {
     sequelize: instance,
-    modelName: "likes",
-    tableName: 'likes',
+    modelName: "tags",
+    tableName: 'tags',
     timestamps:true,
     createdAt: true,
     updatedAt: true
 })
 
-export default Like
+export default Tag

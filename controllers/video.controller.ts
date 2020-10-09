@@ -8,7 +8,8 @@ interface VideoParams{
     title:string,
     description:string,
     user_id: string,
-    id:string
+    id:string,
+    tags?: string
 }
 
 
@@ -20,4 +21,5 @@ class VideoController extends GenericController<VideoParams, Video>{
 
 }
 
+export {VideoParams}
 export default VideoController

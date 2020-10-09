@@ -1,12 +1,11 @@
 import PoolSingleton from '../utils/pool.singleton'
 import {DataTypes, Sequelize} from 'sequelize'
-import User from './User'
-import { Deferrable } from 'sequelize'
 import Comment from './Comment'
 import Like from './Like'
 import { Model } from 'sequelize'
 import UploadNotification from './UploadNotification'
 import View from './View'
+import Tag from './Tag'
 
 const instance = PoolSingleton.getInstance()
 class Video extends Model{}
@@ -61,5 +60,8 @@ View.belongsTo(Video)
 Video.hasMany(UploadNotification)
 UploadNotification.belongsTo(Video)
 
+
+Video.belongsToMany(Tag, {through: "video_tags"})
+Tag.belongsToMany(Video, {through: "video_tags"})
 
 export default Video
