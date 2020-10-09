@@ -1,34 +1,12 @@
-import { Model, ModelCtor } from "sequelize/types";
+import { BuildOptions, DestroyOptions,SaveOptions, FindOptions, FindOrCreateOptions, Model, ModelCtor, UpdateOptions } from "sequelize/types";
 
 interface GenericFunctions<T> {
-  create(params: {}): Promise<T>;
-
-  findOrCreate(params: {}, defaults: {}): Promise<[T, boolean]>;
-
-  findOneByAttributes(attributes: {}): Promise<T | null>;
-
-  updateOneByAttributes(payload : {}, attributes: {}): Promise<undefined>;
-
-  findAll(): Promise<T[]>;
-
-  findAllByFilter(filter:{}): Promise<T[]>;
-
-  findAllByAttributes(attributes: {}): Promise<T[]>;
-
-  destroy(attributes: {}): Promise<number>;
-
-  findAllByPagination(variables: {
-    offset: number;
-    limit: number;
-  }): Promise<T[]>;
-
-  findAllByPaginationFilter(
-    variables: {
-      offset: number;
-      limit: number;
-      where: {};
-    }
-  ): Promise<T[]>;
+  create(params: {}, options?: SaveOptions): Promise<T>,
+  updateOne(params: {}, options:UpdateOptions): Promise<undefined>,
+  destroy (attributes: DestroyOptions): Promise<number>,
+  findOrCreate (params:FindOrCreateOptions) : Promise<[T, boolean]>,
+  findAll (attributes: FindOptions) : Promise<T[]>,
+  findOne (attributes: FindOptions): Promise<T | null>
 }
 
 class GenericController<T, U extends Model> implements GenericFunctions<T> {
@@ -39,66 +17,38 @@ class GenericController<T, U extends Model> implements GenericFunctions<T> {
   }
 
 
-  async updateOneByAttributes(payload : {}, attributes: {}): Promise<undefined> {
-      await this.model.update(payload, { where: attributes });
+  async updateOne(params : {}, options: UpdateOptions): Promise<undefined> {
+      await this.model.update({...params}, {...options});
       return
   }
 
-
-  async findAllByFilter(filter: {}): Promise<T[]> {
-    const new_model = await this.model.findAll({where: filter});
-    return new_model.map((item) => item.get());
-  }
-
-  async findAllByPaginationFilter(
-    variables: { offset: number; limit: number; where: {} }
-  ): Promise<T[]> {
-    const new_model = await this.model.findAll(variables);
-    return new_model.map((item) => item.get());
-  }
-
-  async destroy(attributes: {}): Promise<number> {
-    const value = await this.model.destroy({ where: attributes });
+  async destroy(attributes: DestroyOptions): Promise<number> {
+    const value = await this.model.destroy({...attributes});
     return value;
   }
 
-  async findOrCreate(params: {}, defaults: {}): Promise<[T, boolean]> {
-    const [new_model, exists] = await this.model.findOrCreate({
-      where: params,
-      defaults: defaults,
-    });
+  async findOrCreate(params: FindOrCreateOptions): Promise<[T, boolean]> {
+    const [new_model, exists] = await this.model.findOrCreate({...params});
 
     return [new_model.get(), exists];
   }
 
-  async findAllByAttributes(attributes: {}): Promise<T[]> {
-    const new_model = await this.model.findAll({ where: attributes });
+  async findAll(attributes: FindOptions): Promise<T[]> {
+    const new_model = await this.model.findAll({...attributes});
     return new_model.map((item) => item.get());
   }
 
-  async findAllByPagination(variables: {
-    offset: number;
-    limit: number;
-  }): Promise<T[]> {
-    const new_model = await this.model.findAll(variables);
-    return new_model.map((item) => item.get());
-  }
-
-  async create(params: {}): Promise<T> {
-    const new_model = this.model.build(params);
-    await new_model.save();
+  async create(params: {}, options?: SaveOptions): Promise<T> {
+    const new_model = this.model.build({...params});
+    await new_model.save({...options});
     return new_model.get();
   }
 
-  async findOneByAttributes(attributes: {}): Promise<T | null> {
-    const new_model = await this.model.findOne({ where: attributes });
+  async findOne(attributes: FindOptions): Promise<T | null> {
+    const new_model = await this.model.findOne({...attributes});
     return new_model?.get();
   }
 
-  async findAll(): Promise<T[]> {
-    const new_model = await this.model.findAll();
-    return new_model.map((item) => item.get());
-  }
 }
 
 export default GenericController;
