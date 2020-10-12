@@ -1,14 +1,15 @@
 import axios from "axios";
 
-async function generateOTPMicroservice(email: string) {
+async function generateOTPMicroservice(email: string, host:string) {
   await axios.post(
-    "http://localhost:3000/api/v1/otp",
+    `${host}/api/v1/otp`,
     { email },
     {
       headers: {
-        x_api_key: "123456789",
+        x_api_key: process.env.X_API_KEY,
       },
     }
   );
+  return
 }
 export { generateOTPMicroservice };

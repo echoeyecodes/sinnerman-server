@@ -40,7 +40,8 @@ router.post(
         const uid = generateID();
         console.log({is_verified})
         if (!is_verified) {
-          await generateOTPMicroservice(email);
+          const host = `${req.protocol}://${req.get('host')}`
+          await generateOTPMicroservice(email, host);
           return res.status(202).send({ uid });
         }
 
@@ -79,7 +80,8 @@ router.post(
       const user = await user_controller.create(payload)
       console.log(user);
 
-      await generateOTPMicroservice(email);
+      const host = `${req.protocol}://${req.get('host')}`
+      await generateOTPMicroservice(email, host);
 
       res.status(200).send("ok");
     } catch (error) {

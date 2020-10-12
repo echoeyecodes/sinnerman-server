@@ -1,49 +1,56 @@
 import express, { NextFunction, Request, Response } from "express";
-import redis from "redis";
 import { validateOtpRequest } from "../middlewares/otp.middleware";
 import { mailPublisher } from "../pubsubs/publishers";
-import { deleteUserCacheByEmail } from "../utils/cacheManager";
 import generalRequestMiddleware from "../utils/generalRequestValidator";
 import { generateToken } from "../utils/token";
-import UserController from '../controllers/user.controller'
+import UserController from "../controllers/user.controller";
+import OtpController from "../controllers/otp.controller";
 
-const user_controller = new UserController()
-const client = redis.createClient();
+const user_controller = new UserController();
+const otp_controller = new OtpController();
+
 const router = express();
 
-router.post("/verify", validateOtpRequest('verify'), generalRequestMiddleware, async (req: Request, res: Response) => {
-  const { otp, email } = req.body;
+router.post(
+  "/verify",
+  validateOtpRequest("verify"),
+  generalRequestMiddleware,
+  async (req: Request, res: Response) => {
+    const { otp, email } = req.body;
 
-  client.hgetall(`${email}`, async (err, result) => {
-    if (!result) {
-        console.log({result,err})
-      return res.status(400).send("NOT FOUND or OTP expired");
+    const item = await otp_controller.findOne({ where: { email } });
+    if (!item) {
+      return res.status(400).send("Invalid OTP or token expired");
     }
 
-    if (otp != result.otp) {
-        console.log(result.otp)
+    if (otp != item.otp) {
+      console.log(item.otp);
       return res.status(400).send("Invalid OTP");
     }
 
-    const user = await user_controller.findOne({where:{email}})
+    const user = await user_controller.findOne({ where: { email } });
     if (user) {
-      user_controller.updateOne({is_verified:true}, {where:{email}})
+      user_controller.updateOne({ is_verified: true }, { where: { email } });
       const token = generateToken(user.id);
-      await deleteUserCacheByEmail(email);
+      await otp_controller.destroy({ where: {email} });
       return res.status(200).json({ token });
     }
     return res.status(404).send("User not found");
-  });
-});
+  }
+);
 
-router.post("/", validateOtpRequest('create'), generalRequestMiddleware, async (req: Request, res: Response, next:NextFunction) => {
-  const { email } = req.body;
-  //pubsub function for sending the otp
+router.post(
+  "/",
+  validateOtpRequest("create"),
+  generalRequestMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email } = req.body;
+    //pubsub function for sending the otp
 
-  await mailPublisher(email)
+    await mailPublisher(email);
 
-  res.status(200).send("ok")
-});
-
+    res.status(200).send("ok");
+  }
+);
 
 export default router;
