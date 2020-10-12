@@ -32,7 +32,7 @@ router.post(
     if (user) {
       user_controller.updateOne({ is_verified: true }, { where: { email } });
       const token = generateToken(user.id);
-      await otp_controller.destroy({ where: {email} });
+      await otp_controller.destroy({ where: { email } });
       return res.status(200).json({ token });
     }
     return res.status(404).send("User not found");
@@ -47,9 +47,11 @@ router.post(
     const { email } = req.body;
     //pubsub function for sending the otp
 
-    await mailPublisher(email);
-
-    res.status(200).send("ok");
+    try {
+      await mailPublisher(email);
+    } finally {
+      return res.status(200).send("ok");
+    }
   }
 );
 

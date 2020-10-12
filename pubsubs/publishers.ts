@@ -16,12 +16,12 @@ async function mailPublisher(email: string) {
   const otp = generateOTP();
   console.warn("OTP IS " + otp);
 
-  await deleteUserIfExist(email)
-  await otp_controller.create({ email, otp })
-  const data = JSON.stringify({ email, otp });
-
-  const buffer = Buffer.from(data);
   try {
+    await deleteUserIfExist(email)
+    await otp_controller.create({ email, otp })
+    const data = JSON.stringify({ email, otp });
+    
+    const buffer = Buffer.from(data);
     const messageId = await pubsub.topic("create_mail").publish(buffer);
     console.log({ messageId });
   } catch (error) {
