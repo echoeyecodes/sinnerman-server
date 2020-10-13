@@ -6,7 +6,7 @@ async function generateOTPMicroservice(email: string, host:string) {
     { email },
     {
       headers: {
-        x_api_key: process.env.X_API_KEY,
+        "x-api-key": process.env.X_API_KEY,
       },
     }
   );

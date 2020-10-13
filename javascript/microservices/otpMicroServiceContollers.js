@@ -18,7 +18,7 @@ function generateOTPMicroservice(email, host) {
     return __awaiter(this, void 0, void 0, function* () {
         yield axios_1.default.post(`${host}/api/v1/otp`, { email }, {
             headers: {
-                x_api_key: process.env.X_API_KEY,
+                "x-api-key": process.env.X_API_KEY,
             },
         });
         return;
