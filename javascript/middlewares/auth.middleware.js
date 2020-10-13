@@ -19,10 +19,10 @@ const jwt_key_1 = require("../constants/jwt.key");
 const User_1 = __importDefault(require("../models/User"));
 function validateHeaders() {
     return [
-        express_validator_1.header("x_api_key", "field value x_api_key is required").exists(),
+        express_validator_1.header("x-api-key", "field value x-api-key is required").exists(),
         //this shouldn't be used in production
         //only used to verify the api key is equal to an actual valid value
-        express_validator_1.header("x_api_key", "Invalid api key").equals("123456789")
+        express_validator_1.header("x-api-key", "Invalid api key").equals("123456789")
     ];
 }
 exports.validateHeaders = validateHeaders;

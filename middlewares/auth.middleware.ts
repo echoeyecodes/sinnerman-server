@@ -8,10 +8,10 @@ import User from "../models/User";
 
 function validateHeaders(){
   return [
-    header("x_api_key", "field value x_api_key is required").exists(),
+    header("x-api-key", "field value x-api-key is required").exists(),
     //this shouldn't be used in production
     //only used to verify the api key is equal to an actual valid value
-    header("x_api_key", "Invalid api key").equals("123456789")
+    header("x-api-key", "Invalid api key").equals("123456789")
   ]
 }
 
