@@ -1,4 +1,4 @@
 /node_modules
 .env
-/javascript
+/javascript/pubsub-config.json
 /pubsub-config.json
