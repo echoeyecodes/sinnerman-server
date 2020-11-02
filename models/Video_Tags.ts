@@ -9,19 +9,25 @@ const instance = PoolSingleton.getInstance()
 class Video_Tags extends Model{}
 
 Video_Tags.init({
-    videoId:{
+    video_id:{
         type: DataTypes.UUID,
+        allowNull: false,
         references:{
             model: Video,
             key: 'id'
-        }
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE"
     },
-    tagId:{
+    tag_id:{
         type: DataTypes.UUID,
+        allowNull: false,
         references:{
             model: Tag,
             key: 'id'
-        }
+        },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE"
     },
 }, {
     sequelize: instance,

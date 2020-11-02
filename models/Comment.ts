@@ -11,15 +11,20 @@ Comment.init({
         type: DataTypes.UUID,
         allowNull: false,
         primaryKey: true,
-        defaultValue: DataTypes.UUIDV4,
         unique: true
     },
     comment:{
         type: DataTypes.TEXT,
         allowNull: false 
-    }
-    
-
+    },
+    user_id:{
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
+    video_id:{
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
 }, {
     sequelize: instance,
     modelName: "comments",

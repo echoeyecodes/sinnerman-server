@@ -49,7 +49,7 @@ export default function otpMailSubscriber() {
       await sendMail(payload.otp, payload.email);
       message.ack();
     } catch (error) {
-      throw new Error("Could not start subscription");
+      console.error("Could not send mail");
     }
   };
 

@@ -9,7 +9,10 @@ interface VideoParams{
     description:string,
     user_id: string,
     id:string,
-    tags?: string
+    tags?: string,
+    thumbnail: string,
+    original_url:string,
+    duration:string
 }
 
 

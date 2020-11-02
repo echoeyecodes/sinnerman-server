@@ -2,7 +2,7 @@ import Tag from "../models/Tag";
 import GenericController from "./GenericController";
 
 interface TagParams {
-  video_id: string;
+  name: string;
   id:string,
 }
 
@@ -14,5 +14,5 @@ class TagController extends GenericController<TagParams, Tag> {
     
 }
 
-
+export {TagParams}
 export default TagController 

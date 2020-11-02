@@ -14,6 +14,14 @@ Like.init({
         defaultValue: DataTypes.UUIDV4,
         unique: true
     },
+    user_id:{
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
+    video_id:{
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
 }, {
     sequelize: instance,
     modelName: "likes",

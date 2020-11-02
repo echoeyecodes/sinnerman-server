@@ -10,7 +10,6 @@ function validateVideoRequest(type: VIDEO_REQUEST) {
     case "one":
       return [
         param("id").exists(),
-        param("id", "invalid type for parameter id. id must be UUID").isUUID(),
       ];
     case "add":
       return [

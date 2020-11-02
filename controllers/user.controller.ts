@@ -7,7 +7,8 @@ interface UserParams {
   username: string;
   email: string;
   is_verified:boolean,
-  id:string
+  id:string,
+  profile_url:string
 }
 
 class UserController extends GenericController<UserParams, User> {

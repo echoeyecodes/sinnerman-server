@@ -16,7 +16,8 @@ router.post(
   validateOtpRequest("verify"),
   generalRequestMiddleware,
   async (req: Request, res: Response) => {
-    const { otp, email } = req.body;
+    const { otp, verification_response } = req.body;
+    const email = verification_response
 
     const item = await otp_controller.findOne({ where: { email } });
     if (!item) {
@@ -28,6 +29,7 @@ router.post(
       return res.status(400).send("Invalid OTP");
     }
 
+    
     const user = await user_controller.findOne({ where: { email } });
     if (user) {
       user_controller.updateOne({ is_verified: true }, { where: { email } });
@@ -44,11 +46,11 @@ router.post(
   validateOtpRequest("create"),
   generalRequestMiddleware,
   async (req: Request, res: Response, next: NextFunction) => {
-    const { email } = req.body;
+    const { verification_response } = req.body;
     //pubsub function for sending the otp
 
     try {
-      await mailPublisher(email);
+      await mailPublisher(verification_response);
     } finally {
       return res.status(200).send("ok");
     }

@@ -7,11 +7,11 @@ function validateOtpRequest(type: OTP_Request){
         case "verify":
           return [
             body("otp", "otp not provided").exists(),
-            body("email", "email not provided or is invalid").exists().isEmail()
+            body("verification_response", "verification_response not provided or is invalid").exists()
           ]
           case "create":
             return [
-              body("email", "email not provided or is invalid").exists().isEmail(),
+              body("verification_response", "verification_response not provided or is invalid").exists(),
             ] 
             default:
               return []
