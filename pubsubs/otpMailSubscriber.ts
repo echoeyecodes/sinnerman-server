@@ -3,11 +3,11 @@ import pubsub from "../utils/pubusbSingleton";
 
 function generateHtml(otp: string) {
   return `<div>
-        <h2>Hello Sinnerman!</h2>
-        <p>Let's face it. You have nothing to do, so you are just one lazy sloth looking
-         to find something worthwhile. Lucky for you, I exist to make your life meaningful (kiss my feet). Now, get 
+        <h2>Ohhh Sinnerman!</h2>
+        <p>Where're you gonna run to. 2 things you need to know before going back to the app. I love Wraith! I live Watson.
+        And we are gonna definitely have a "happily ever after" moment someday. Anyway, get 
          right back to the app with this your code. And please, in the name of everything
-          nice in this planet... Do not forget the OTP. It costs me money, you know?... BITCH!</p>
+          nice on this planet... Do not forget this PIN. It costs me money, you know!</p>
 
           <h4>${otp}</h4>
           </div>     
