@@ -8,6 +8,7 @@ import videoRoute from './routes/video.route'
 import commentRoute from './routes/comment.route'
 import likeRoute from './routes/like.route'
 import viewRoute from './routes/view.route'
+import uploadNotificationRoute from './routes/upload_notification.route'
 import otpMailSubscriber from './pubsubs/otpMailSubscriber'
 import uploadNotificationSubscriber from './pubsubs/uploadNotificationSubscriber'
 import { validateHeaders, validateToken, validateTokenMiddleware } from './middlewares/auth.middleware'
@@ -27,6 +28,7 @@ app.use("/api/v1/video", videoRoute)
 app.use("/api/v1/comment", commentRoute)
 app.use("/api/v1/like", likeRoute)
 app.use("/api/v1/view", viewRoute)
+app.use("/api/v1/upload-notification", uploadNotificationRoute)
 
 app.listen(PORT, () =>{
     console.log(`Server started on port ${PORT}`)

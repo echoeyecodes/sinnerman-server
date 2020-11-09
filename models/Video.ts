@@ -27,9 +27,28 @@ Video.init({
         allowNull: false,
     },
     video_url:{
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false
-    }
+    },
+    thumbnail:{
+        type: DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: ""
+    },
+    original_url:{
+        type: DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: ""
+    },
+    duration:{
+        type: DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: ""
+    },
+    user_id:{
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
 }, {
     sequelize: instance,
     modelName: "videos",
@@ -39,29 +58,35 @@ Video.init({
     updatedAt: true
 })
 
+
 Video.hasMany(Comment, {
-    foreignKey: "video_id"
+    foreignKey: 'video_id',
+    foreignKeyConstraint: true,
+    constraints: true
 })
+
 Video.hasMany(Like, {
-    foreignKey: "video_id"
+    foreignKey: 'video_id',
+    foreignKeyConstraint: true,
+    constraints: true
 })
 
 Video.hasMany(UploadNotification, {
-    foreignKey: "video_id"
+    foreignKey: 'video_id',
+    foreignKeyConstraint: true,
+    constraints: true
 })
 
 Video.hasMany(View, {
-    foreignKey: "video_id"
+    foreignKey: 'video_id',
+    foreignKeyConstraint: true,
+    constraints: true
 })
 
-Comment.belongsTo(Video)
-Like.belongsTo(Video)
-View.belongsTo(Video)
-Video.hasMany(UploadNotification)
-UploadNotification.belongsTo(Video)
+Video.belongsToMany(Tag, {through: "video_tags", as: "video_id"})
+Tag.belongsToMany(Video, {through: "video_tags", as: "tag_id"})
+Video.sync({alter: true})
 
 
-Video.belongsToMany(Tag, {through: "video_tags"})
-Tag.belongsToMany(Video, {through: "video_tags"})
 
 export default Video

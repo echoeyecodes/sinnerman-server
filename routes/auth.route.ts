@@ -1,6 +1,6 @@
 import express, { Request, Response } from "express";
 import RequestInterface from "../CustomInterfaces/RequestInterface";
-import { validateAuthRequest, validateUsernameExists } from "../middlewares/auth.middleware";
+import { validateAuthRequest, validateEmailExists, validateUsernameExists } from "../middlewares/auth.middleware";
 import User from "../models/User";
 import bcrypt from "bcryptjs";
 import { generateToken } from "../utils/token";
@@ -42,11 +42,11 @@ router.post(
         if (!is_verified) {
           const host = `${req.protocol}://${req.get('host')}`
           await generateOTPMicroservice(email, host);
-          return res.status(202).send({ uid });
+          return res.status(202).send(email);
         }
 
         const token = generateToken(id);
-        res.status(200).json({ token });
+        res.status(200).send(token);
       }
     } catch (error) {
       res.status(500).send("Couldn't process request. Please try again");
@@ -59,6 +59,7 @@ router.post(
   "/signup",
   validateAuthRequest("signup"),
   generalRequestMiddleware,
+  validateEmailExists,
   validateUsernameExists,
   async (req: Request, res: Response) => {
     const { fullname, email, password, username } = req.body;
@@ -83,7 +84,8 @@ router.post(
       const host = `${req.protocol}://${req.get('host')}`
       await generateOTPMicroservice(email, host);
 
-      res.status(200).send("ok");
+      
+      res.status(200).send(email);
     } catch (error) {
       res.status(500).send("An error occured. Please try again");
       throw error;

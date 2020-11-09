@@ -30,8 +30,13 @@ User.init({
     },
     profile_url:{
         type: DataTypes.STRING,
-        allowNull: true,
-        defaultValue: ""      
+        allowNull: false,
+        defaultValue: "https://res.cloudinary.com/echoeyecodes/image/upload/c_scale,w_700/v1598606495/hbjawa1jnpqvpufxohrh.jpg"    
+    },
+    backdrop_path:{
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: ""   
     },
     is_verified:{
         type: DataTypes.BOOLEAN,
@@ -56,29 +61,46 @@ User.init({
 })
 
 User.hasMany(Video, {
-    foreignKey: "user_id"
-})
-
-User.hasMany(View, {
-    foreignKey: "user_id"
-})
-
-User.hasMany(Like, {
-    foreignKey: "user_id"
+    foreignKey: 'user_id',
+    foreignKeyConstraint: true,
+    constraints: true,
+    onUpdate: "NO ACTION",
+    onDelete: "CASCADE"
 })
 
 User.hasMany(Comment, {
-    foreignKey: "user_id"
+    foreignKey: 'user_id',
+    foreignKeyConstraint: true,
+    constraints: true
+})
+
+User.hasMany(Like, {
+    foreignKey: 'user_id',
+    foreignKeyConstraint: true,
+    constraints: true
 })
 
 User.hasMany(UploadNotification, {
-    foreignKey: "user_id"
+    foreignKey: 'user_id',
+    foreignKeyConstraint: true,
+    constraints: true,
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE"
 })
 
-UploadNotification.belongsTo(User)
-Comment.belongsTo(User)
-View.belongsTo(User)
-Like.belongsTo(User)
-Video.belongsTo(User)
+User.hasMany(UploadNotification, {
+    foreignKey: 'created_by',
+    foreignKeyConstraint: true,
+    constraints: true,
+    onUpdate: "CASCADE",
+    onDelete: "CASCADE"
+})
 
+User.hasMany(View, {
+    foreignKey: 'user_id',
+    foreignKeyConstraint: true,
+    constraints: true
+})
+
+User.sync({alter:true})
 export default User

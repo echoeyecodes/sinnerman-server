@@ -31,13 +31,11 @@ async function mailPublisher(email: string) {
 
 async function uploadNotificationPublisher(
   video_id: string,
-  video_url: string
+  thumbnail: string,
+  created_by:string
 ) {
-  const thumbnail = video_url
-    .split(/\.(?=[^\.]+$)/)
-    .shift()
-    ?.concat(".jpg");
-  const payload = { video_id, thumbnail };
+
+  const payload = { video_id, thumbnail, created_by };
 
   const buffer = Buffer.from(JSON.stringify(payload));
 

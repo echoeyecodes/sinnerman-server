@@ -4,14 +4,16 @@ import jwt from "jsonwebtoken";
 import { JWT_KEY } from "../constants/jwt.key";
 import RequestInterface from "../CustomInterfaces/RequestInterface";
 import User from "../models/User";
+import UserController from '../controllers/user.controller'
 
+const user_controller = new UserController()
 
 function validateHeaders(){
   return [
-    header("x_api_key", "field value x_api_key is required").exists(),
+    header("x-api-key", "field value x-api-key is required").exists(),
     //this shouldn't be used in production
     //only used to verify the api key is equal to an actual valid value
-    header("x_api_key", "Invalid api key").equals("123456789")
+    header("x-api-key", "Invalid api key").equals(process.env.X_API_KEY!)
   ]
 }
 
@@ -21,7 +23,7 @@ function validateToken(){
   ]
 }
 
-const validateTokenMiddleware = (
+const validateTokenMiddleware = async (
   req: RequestInterface,
   res: Response,
   next: NextFunction
@@ -29,10 +31,15 @@ const validateTokenMiddleware = (
   const token = req.header("token")!;
   try {
     const id = jwt.verify(token, JWT_KEY).toString();
+
+    const user = await user_controller.findOne({where:{id}})
+    if(!user){
+      return res.status(401).send("Unauthorized")
+    }
     req.id = id
     next();
   } catch (error) {
-    throw error("Invalid token")
+    res.status(401).send("Unauthorized")
   }
 };
 
@@ -62,9 +69,18 @@ async function validateUsernameExists(req:Request, res: Response, next:NextFunct
     const {username} = req.body
     const user = await User.findOne({where:{username}})
     if(user){
-      return res.send(true)
+      return res.status(202).send("An account exists with this username")
     }
     next()
 }
 
-export {validateTokenMiddleware, validateToken, validateHeaders, validateAuthRequest, validateUsernameExists };
+async function validateEmailExists(req:Request, res: Response, next:NextFunction){
+  const {email} = req.body
+  const user = await User.findOne({where:{email}})
+  if(user){
+    return res.status(202).send("An account exists with this email")
+  }
+  next()
+}
+
+export {validateTokenMiddleware, validateToken, validateHeaders, validateAuthRequest,validateEmailExists, validateUsernameExists };

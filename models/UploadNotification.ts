@@ -22,7 +22,11 @@ UploadNotification.init({
     thumbnail:{
         type: DataTypes.STRING,
         allowNull: false,
-    }
+    },
+    video_id:{
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
 }, {
     sequelize: instance,
     modelName: "upload_notifications",
