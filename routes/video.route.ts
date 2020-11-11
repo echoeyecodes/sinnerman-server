@@ -76,6 +76,9 @@ async function uploadImage(
       path,
       {
         folder: "images",
+        transformation:[{
+          width: 600
+        }]
       },
       (err, result) => {
         if (err) {
@@ -140,6 +143,8 @@ async function fetchVideosFromTag(id: string, all_tags: TagParams[]) {
     all_tags.map(async (tag) => {
       const tags = await video_tag_controller.findAll({
         where: { tag_id: tag.id },
+        offset: 0,
+        limit: 4
       });
 
       const videos = await Promise.all(
@@ -147,7 +152,7 @@ async function fetchVideosFromTag(id: string, all_tags: TagParams[]) {
           const videos = await video_controller.findAll({
             where: { id: item.video_id },
             offset: 0,
-            limit: 5,
+            limit: 4,
           });
 
           const related_videos = await fetchVideosAndUsers(id, videos);
@@ -336,6 +341,9 @@ router.get("/", async (req: RequestInterface, res: Response) => {
     const all_videos = await video_controller.findAll({
       limit: parseInt(limit),
       offset: parseInt(offset),
+      order: [
+        ["createdAt", "DESC"]
+      ]
     });
 
     const videos = await fetchVideosAndUsers(req.id!, all_videos);
@@ -359,6 +367,9 @@ router.get("/explore/tags", async (req: RequestInterface, res: Response) => {
     const all_tags = await tag_controller.findAll({
       offset: parseInt(offset),
       limit: parseInt(limit),
+      order: [
+        ["createdAt", "DESC"]
+      ]
     });
 
     const data = await fetchVideosFromTag(req.id!, all_tags);
