@@ -22,6 +22,9 @@ router.get("/", async (req: RequestInterface, res: Response) => {
       where: { user_id: req.id },
       limit: parseInt(limit),
       offset: parseInt(offset),
+      order: [
+        ["createdAt", "DESC"]
+      ]
     });
 
     const data = await Promise.all(notifications.map(async(item) =>{
@@ -44,7 +47,7 @@ router.get("/", async (req: RequestInterface, res: Response) => {
             video_id,
             message,
             timestamp,
-            thumbnail,
+            thumbnail: video?.thumbnail,
             profile_url,
             is_read
         }
