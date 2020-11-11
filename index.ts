@@ -1,5 +1,5 @@
 require('dotenv').config()
-import express from 'express'
+import express, { Response } from 'express'
 import bodyparser from 'body-parser'
 import authRoute from './routes/auth.route'
 import otpRoute from './routes/otp.route'
@@ -17,6 +17,11 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 app.use(bodyparser.json())
+
+app.use("/getapp", (_, res: Response) =>{
+    res.redirect("https://play.google.com/store/apps/details?id=com.echoeyecodes.sinnerman")
+})
+
 app.use(validateHeaders(), generalRequestMiddleware)
 app.use("/api/v1/auth", authRoute)
 app.use("/api/v1/otp", otpRoute)
