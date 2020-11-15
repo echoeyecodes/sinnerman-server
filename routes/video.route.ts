@@ -13,25 +13,42 @@ import {
   UploadApiResponse,
   v2 as cloudinary,
 } from "cloudinary";
+import moment from "moment";
 import { uploadNotificationPublisher } from "../pubsubs/publishers";
 import VideoController, { VideoParams } from "../controllers/video.controller";
 import ViewController from "../controllers/view.controller";
 import UserController from "../controllers/user.controller";
 import LikeController from "../controllers/like.controller";
+import UserActivityController from "../controllers/user_activity.controller";
 import VideoTagController from "../controllers/video_tag.controller";
 import TagController, { TagParams } from "../controllers/tag.controller";
 import { Op } from "sequelize";
 import Pool_singleton from "../utils/pool.singleton";
+import { QueryTypes } from "sequelize";
+import Video from "../models/Video";
 
 const like_controller = new LikeController();
 const tag_controller = new TagController();
 const video_tag_controller = new VideoTagController();
 const video_controller = new VideoController();
+const user_activity_controller = new UserActivityController();
 const user_controller = new UserController();
 const view_controller = new ViewController();
 
 const router = express.Router();
 cloudinary.config(cloudinary_config);
+
+type query_params = {
+  last_video_timestamp: number;
+  last_explore_timestamp: number;
+};
+
+type cache_params = {
+  id: string;
+  data: query_params;
+}[];
+
+const cache: cache_params = [];
 
 type ServiceResponse = {
   status: number;
@@ -76,9 +93,11 @@ async function uploadImage(
       path,
       {
         folder: "images",
-        transformation:[{
-          width: 600
-        }]
+        transformation: [
+          {
+            width: 600,
+          },
+        ],
       },
       (err, result) => {
         if (err) {
@@ -144,7 +163,7 @@ async function fetchVideosFromTag(id: string, all_tags: TagParams[]) {
       const tags = await video_tag_controller.findAll({
         where: { tag_id: tag.id },
         offset: 0,
-        limit: 4
+        limit: 4,
       });
 
       const videos = await Promise.all(
@@ -336,20 +355,51 @@ router.get("/", async (req: RequestInterface, res: Response) => {
   };
 
   const { limit = "20", offset = "0" } = <Params>req.query;
+  let now = moment().unix();
+
+  const user = await user_activity_controller.findOrCreate({
+    where: {
+      user_id: req.id,
+    },
+    defaults: {
+      user_id: req.id
+    },
+  });
+
+  if (offset == "0") {
+    await user_activity_controller.updateOne(
+      {
+        last_video_timestamp: now,
+      },
+      {
+        where: {
+          user_id: req.id,
+        },
+      }
+    );
+  } else {
+    now = user[0].last_video_timestamp;
+  }
+
+  const order = `(CAST(extract(epoch from "createdAt") as integer) - ${now}) % 181`;
 
   try {
-    const all_videos = await video_controller.findAll({
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [
-        ["createdAt", "DESC"]
-      ]
-    });
+    const all_videos = <VideoParams[]>(
+      (<unknown>await Pool_singleton.getInstance().query(
+        `SELECT * FROM videos ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`,
+        {
+          type: QueryTypes.SELECT,
+          model: Video,
+          raw: true,
+        }
+      ))
+    );
 
     const videos = await fetchVideosAndUsers(req.id!, all_videos);
 
     res.status(200).json(videos);
   } catch (error) {
+    // res.status(500).send(error);
     res.status(500).send("Could not fetch videos. Please try");
     throw error;
   }
@@ -367,9 +417,7 @@ router.get("/explore/tags", async (req: RequestInterface, res: Response) => {
     const all_tags = await tag_controller.findAll({
       offset: parseInt(offset),
       limit: parseInt(limit),
-      order: [
-        ["createdAt", "DESC"]
-      ]
+      order: [["createdAt", "DESC"]],
     });
 
     const data = await fetchVideosFromTag(req.id!, all_tags);
@@ -400,7 +448,12 @@ router.get(
         where: { id },
       });
 
-      const data = await fetchVideosFromSingleTag(req.id!, tag!, parseInt(limit), parseInt(offset));
+      const data = await fetchVideosFromSingleTag(
+        req.id!,
+        tag!,
+        parseInt(limit),
+        parseInt(offset)
+      );
 
       res.status(200).json(data);
     } catch (error) {
