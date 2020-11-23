@@ -29,6 +29,8 @@ const validateTokenMiddleware = async (
   next: NextFunction
 ) => {
   const token = req.header("token")!;
+  const version = req.header("version")
+  const versioncode = req.header("versioncode")
   try {
     const id = jwt.verify(token, JWT_KEY).toString();
 
@@ -37,6 +39,9 @@ const validateTokenMiddleware = async (
       return res.status(401).send("Unauthorized")
     }
     req.id = id
+    req.version = version
+    req.versioncode = versioncode
+    
     next();
   } catch (error) {
     res.status(401).send("Unauthorized")

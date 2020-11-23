@@ -22,6 +22,14 @@ app.use("/getapp", (_, res: Response) =>{
     res.redirect("https://play.google.com/store/apps/details?id=com.echoeyecodes.sinnerman")
 })
 
+app.use("/promotions", (_, res: Response) =>{
+    res.redirect("https://wa.link/4kgo0h")
+})
+
+app.use("/info", (_, res: Response) =>{
+    res.redirect("https://wa.link/fxbvha")
+})
+
 app.use(validateHeaders(), generalRequestMiddleware)
 app.use("/api/v1/auth", authRoute)
 app.use("/api/v1/otp", otpRoute)
