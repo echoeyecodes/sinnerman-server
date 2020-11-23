@@ -26,6 +26,7 @@ import { Op } from "sequelize";
 import Pool_singleton from "../utils/pool.singleton";
 import { QueryTypes } from "sequelize";
 import Video from "../models/Video";
+import { fetchUserFromVideo } from "./user.route";
 
 const like_controller = new LikeController();
 const tag_controller = new TagController();
@@ -119,26 +120,49 @@ function generateThumbnail(path: string) {
   return image;
 }
 
-async function fetchVideosAndUsers(id: string, videos: VideoParams[]) {
+async function getVideoViews(video_id: string) {
+  return await view_controller.findAll({
+    where: {
+      video_id,
+    },
+  });
+}
+
+async function getVideoUser(user_id: string) {
+  return await user_controller.findOne({
+    where: {
+      id: user_id,
+    },
+  });
+}
+
+async function getVideoLikes(video_id: string) {
+  return await like_controller.findAll({
+    where: {
+      video_id,
+    },
+  });
+}
+
+async function hasUserLiked(user_id: string, video_id: string) {
+  return await like_controller.findOne({
+    where: { user_id: user_id, video_id },
+  });
+}
+
+async function fetchVideosAndUsers(id: string, videos: string[]) {
   const data = await Promise.all(
-    videos.map(async (video) => {
+    videos.map(async (video_id) => {
+      const video = await video_controller.findOne({ where: { id: video_id } });
       const user = await user_controller.findOne({
         where: {
-          id: video.user_id,
+          id: video?.user_id,
         },
       });
 
-      const likes = await like_controller.findAll({
-        where: {
-          video_id: video.id,
-        },
-      });
-      const views = await view_controller.findAll({
-        where: {
-          video_id: video.id,
-        },
-      });
-      const has_liked = likes.find((item) => (item.user_id = id));
+      const likes = await getVideoLikes(video_id);
+      const views = await getVideoViews(video_id);
+      const has_liked = await hasUserLiked(id, video_id);
 
       const video_payload = Object.assign({}, video, {
         likes: likes.length,
@@ -166,21 +190,11 @@ async function fetchVideosFromTag(id: string, all_tags: TagParams[]) {
         limit: 4,
       });
 
-      const videos = await Promise.all(
-        tags.map(async (item) => {
-          const videos = await video_controller.findAll({
-            where: { id: item.video_id },
-            offset: 0,
-            limit: 4,
-          });
-
-          const related_videos = await fetchVideosAndUsers(id, videos);
-
-          return related_videos;
-        })
+      const related_videos = await fetchVideosAndUsers(
+        id,
+        tags.map((item) => item.video_id)
       );
-
-      return { name: tag.name, id: tag.id, videos: videos.flat() };
+      return { name: tag.name, id: tag.id, videos: related_videos.flat() };
       // return videos.flat()
     })
   );
@@ -205,7 +219,10 @@ async function fetchVideosFromSingleTag(
         where: { id: t.video_id },
       });
 
-      const related_videos = await fetchVideosAndUsers(id, videos);
+      const related_videos = await fetchVideosAndUsers(
+        id,
+        videos.map((item) => item.id)
+      );
 
       return related_videos;
     })
@@ -215,94 +232,94 @@ async function fetchVideosFromSingleTag(
   return data.flat();
 }
 
-router.post(
-  "/upload",
-  validateVideoFields,
-  async (req: RequestInterface, res: Response) => {
-    const form = new formidable.IncomingForm();
-    const user_id = req.id!;
+// router.post(
+//   "/upload",
+//   validateVideoFields,
+//   async (req: RequestInterface, res: Response) => {
+//     const form = new formidable.IncomingForm();
+//     const user_id = req.id!;
 
-    form.parse(req, async (err, fields: Fields, files: Files) => {
-      const transaction = await Pool_singleton.getInstance().transaction();
-      try {
-        console.log({ fields });
-        if (err) {
-          console.log({ err });
-          return res.status(500).send("Could not load video. Please try again");
-        }
-        const payload = await uploadVideo(files.video.path);
+//     form.parse(req, async (err, fields: Fields, files: Files) => {
+//       const transaction = await Pool_singleton.getInstance().transaction();
+//       try {
+//         console.log({ fields });
+//         if (err) {
+//           console.log({ err });
+//           return res.status(500).send("Could not load video. Please try again");
+//         }
+//         const payload = await uploadVideo(files.video.path);
 
-        const original_url = payload.secure_url;
-        const video_url = payload.eager[0].secure_url;
-        const { title, description, tags = "" }: VideoParams = <VideoParams>(
-          (<unknown>fields)
-        );
-        const parsed_tags = JSON.parse(tags);
-        console.log({ video_url });
+//         const original_url = payload.secure_url;
+//         const video_url = payload.eager[0].secure_url;
+//         const { title, description, tags = "" }: VideoParams = <VideoParams>(
+//           (<unknown>fields)
+//         );
+//         const parsed_tags = JSON.parse(tags);
+//         console.log({ video_url });
 
-        const thumbnail = original_url
-          .split(/\.(?=[^\.]+$)/)
-          .shift()
-          ?.concat(".webp");
+//         const thumbnail = original_url
+//           .split(/\.(?=[^\.]+$)/)
+//           .shift()
+//           ?.concat(".webp");
 
-        const image = generateThumbnail(thumbnail);
+//         const image = generateThumbnail(thumbnail);
 
-        const video = await video_controller.create(
-          {
-            title,
-            description,
-            video_url,
-            user_id,
-            thumbnail: image,
-            original_url,
-            duration: payload.duration,
-          },
-          { transaction }
-        );
+//         const video = await video_controller.create(
+//           {
+//             title,
+//             description,
+//             video_url,
+//             user_id,
+//             thumbnail: image,
+//             original_url,
+//             duration: payload.duration,
+//           },
+//           { transaction }
+//         );
 
-        const tag_ids: string[] = await Promise.all(
-          parsed_tags.map(
-            async (tag: string): Promise<string> => {
-              const [{ id }] = await tag_controller.findOrCreate({
-                where: { name: tag },
-                defaults: { name: tag },
-                transaction,
-              });
-              return id;
-            }
-          )
-        );
+//         const tag_ids: string[] = await Promise.all(
+//           parsed_tags.map(
+//             async (tag: string): Promise<string> => {
+//               const [{ id }] = await tag_controller.findOrCreate({
+//                 where: { name: tag },
+//                 defaults: { name: tag },
+//                 transaction,
+//               });
+//               return id;
+//             }
+//           )
+//         );
 
-        if (tag_ids.length > 0) {
-          await Promise.all(
-            tag_ids.map(
-              async (tag) =>
-                await video_tag_controller.findOrCreate({
-                  where: {
-                    [Op.and]: [{ video_id: video.id }, { tag_id: tag }],
-                  },
-                  defaults: { video_id: video.id, tag_id: tag },
-                  transaction,
-                })
-            )
-          );
-        }
+//         if (tag_ids.length > 0) {
+//           await Promise.all(
+//             tag_ids.map(
+//               async (tag) =>
+//                 await video_tag_controller.findOrCreate({
+//                   where: {
+//                     [Op.and]: [{ video_id: video.id }, { tag_id: tag }],
+//                   },
+//                   defaults: { video_id: video.id, tag_id: tag },
+//                   transaction,
+//                 })
+//             )
+//           );
+//         }
 
-        //Only send notification when transactions are successful
-        transaction.afterCommit(async () => {
-          await uploadNotificationPublisher(video.id, image, req.id!);
-        });
+//         //Only send notification when transactions are successful
+//         transaction.afterCommit(async () => {
+//           await uploadNotificationPublisher(video.id, image, req.id!);
+//         });
 
-        await transaction.commit();
-        res.status(200).json(video);
-      } catch (error) {
-        console.log({ error });
-        await transaction.rollback();
-        return res.status(500).send("An error occured during upload");
-      }
-    });
-  }
-);
+//         await transaction.commit();
+//         res.status(200).json(video);
+//       } catch (error) {
+//         console.log({ error });
+//         await transaction.rollback();
+//         return res.status(500).send("An error occured during upload");
+//       }
+//     });
+//   }
+// );
 
 router.get(
   "/:id",
@@ -328,12 +345,14 @@ router.get(
       const user = await user_controller.findOne({ where: { id: user_id } });
       const likes = await like_controller.findAll({ where: { video_id: id } });
       const views = await view_controller.findAll({ where: { video_id: id } });
-      const has_liked = likes.find((item) => (item.user_id = id));
+      const has_liked = await like_controller.findOne({
+        where: { user_id: req.id, video_id: id },
+      });
 
       const video_payload = Object.assign({}, video, {
         likes: likes.length,
         views: views.length,
-        has_liked: has_liked != null || undefined,
+        has_liked: has_liked != null,
       });
 
       Object.assign(payload, {
@@ -348,62 +367,146 @@ router.get(
   }
 );
 
-router.get("/", async (req: RequestInterface, res: Response) => {
-  type Params = {
-    limit: string;
-    offset: string;
-  };
+// router.get("/", async (req: RequestInterface, res: Response) => {
+//   type Params = {
+//     limit: string;
+//     offset: string;
+//   };
 
-  const { limit = "20", offset = "0" } = <Params>req.query;
-  let now = moment().unix();
+//   const { limit = "20", offset = "0" } = <Params>req.query;
+//   let now = moment().unix();
 
-  const user = await user_activity_controller.findOrCreate({
-    where: {
-      user_id: req.id,
-    },
-    defaults: {
-      user_id: req.id
-    },
-  });
+//   const user = await user_activity_controller.findOrCreate({
+//     where: {
+//       user_id: req.id,
+//     },
+//     defaults: {
+//       user_id: req.id,
+//     },
+//   });
 
-  if (offset == "0") {
-    await user_activity_controller.updateOne(
-      {
-        last_video_timestamp: now,
-      },
-      {
-        where: {
-          user_id: req.id,
-        },
+//   if (offset == "0") {
+//     await user_activity_controller.updateOne(
+//       {
+//         last_video_timestamp: now,
+//       },
+//       {
+//         where: {
+//           user_id: req.id,
+//         },
+//       }
+//     );
+//   } else {
+//     now = user[0].last_video_timestamp;
+//   }
+
+//   const order = `(CAST(extract(epoch from "createdAt") as integer) - ${now}) % 181`;
+
+//   try {
+//     const all_videos = <VideoParams[]>(
+//       (<unknown>await Pool_singleton.getInstance().query(
+//         `SELECT * FROM videos ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`,
+//         {
+//           type: QueryTypes.SELECT,
+//           model: Video,
+//           raw: true,
+//         }
+//       ))
+//     );
+
+//     const data = await Promise.all(
+//       all_videos.map(async (video) => {
+
+//         const likes = await like_controller.findAll({
+//           where: {
+//             video_id:video.id,
+//           },
+//         });
+//         const views = await view_controller.findAll({
+//           where: {
+//             video_id:video.id,
+//           },
+//         });
+//         const has_liked = like_controller.findOne({where:{user_id:req.id, video_id: video.id}})
+
+//         const video_payload = Object.assign({}, video, {
+//           likes: likes.length,
+//           views: views.length,
+//           has_liked: has_liked != null || has_liked != undefined,
+//         });
+
+//         const user = await user_controller.findOne({
+//           where: { id: video.user_id },
+//         });
+
+//         const payload = {
+//           video: video_payload,
+//           user,
+//         };
+
+//         return payload;
+//       })
+//     );
+
+//     res.status(200).json(data);
+//   } catch (error) {
+//     // res.status(500).send(error);
+//     res.status(500).send("Could not fetch videos. Please try");
+//     throw error;
+//   }
+// });
+
+router.get(
+  "/activity/:context",
+  async (req: RequestInterface, res: Response) => {
+    type Params = {
+      limit: string;
+      offset: string;
+    };
+
+    const { limit = "20", offset = "0" } = <Params>req.query;
+
+    try {
+      switch (req.params.context) {
+        case "likes":
+          const likes = await like_controller.findAll({
+            where: {
+              user_id: req.id,
+            },
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+          });
+
+          const all_liked_videos = await fetchVideosAndUsers(
+            req.id!,
+            likes.map((item) => item.video_id)
+          );
+          return res.status(200).json(all_liked_videos);
+
+        case "history":
+          const history = await view_controller.findAll({
+            where: {
+              user_id: req.id,
+            },
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+          });
+          const all_video_history = await fetchVideosAndUsers(
+            req.id!,
+            history.map((item) => item.video_id)
+          );
+          return res.status(200).json(all_video_history);
+
+        default:
+          return res.json([]);
       }
-    );
-  } else {
-    now = user[0].last_video_timestamp;
+    } catch (error) {
+      // res.status(500).send(error);
+      res.status(500).send("Could not fetch videos. Please try");
+      throw error;
+    }
   }
-
-  const order = `(CAST(extract(epoch from "createdAt") as integer) - ${now}) % 181`;
-
-  try {
-    const all_videos = <VideoParams[]>(
-      (<unknown>await Pool_singleton.getInstance().query(
-        `SELECT * FROM videos ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`,
-        {
-          type: QueryTypes.SELECT,
-          model: Video,
-          raw: true,
-        }
-      ))
-    );
-
-    const videos = await fetchVideosAndUsers(req.id!, all_videos);
-
-    res.status(200).json(videos);
-  } catch (error) {
-    // res.status(500).send(error);
-    res.status(500).send("Could not fetch videos. Please try");
-    throw error;
-  }
-});
+);
 
 router.get("/explore/tags", async (req: RequestInterface, res: Response) => {
   type Params = {
@@ -420,7 +523,14 @@ router.get("/explore/tags", async (req: RequestInterface, res: Response) => {
       order: [["createdAt", "DESC"]],
     });
 
-    const data = await fetchVideosFromTag(req.id!, all_tags);
+    const data = await Promise.all(all_tags.reverse().map( async (item) =>{
+      const videos = await fetchVideosByTag(req.id!, item.id, 10, 0)
+      return {
+        id: item.id,
+        name: item.name,
+        videos
+      }
+    }))
 
     res.status(200).json(data);
   } catch (error) {
@@ -444,24 +554,328 @@ router.get(
     const { limit = "5", offset = "0" } = <Params>req.query;
 
     try {
-      const tag = await tag_controller.findOne({
-        where: { id },
-      });
-
-      const data = await fetchVideosFromSingleTag(
-        req.id!,
-        tag!,
-        parseInt(limit),
-        parseInt(offset)
-      );
-
-      res.status(200).json(data);
+      const data = await fetchVideosByTag(req.id!, id, parseInt(limit), parseInt(offset))
+      return res.status(200).json(data)
     } catch (error) {
       res.status(500).send("Could not fetch videos. Please try");
       throw error;
     }
   }
 );
+
+router.get("/", async (req: RequestInterface, res: Response) => {
+  type Params = {
+    limit: string;
+    offset: string;
+  };
+
+  const { limit = "20", offset = "0" } = <Params>req.query;
+  let now = moment().unix();
+
+  const user = await user_activity_controller.findOrCreate({
+    where: {
+      user_id: req.id,
+    },
+    defaults: {
+      user_id: req.id,
+    },
+  });
+
+  if (offset == "0") {
+    await user_activity_controller.updateOne(
+      {
+        last_video_timestamp: now,
+      },
+      {
+        where: {
+          user_id: req.id,
+        },
+      }
+    );
+  } else {
+    now = user[0].last_video_timestamp;
+  }
+
+  const order = `(CAST(extract(epoch from "createdAt") as integer) - ${now}) % 181`;
+
+  let query;
+  if (req.version) {
+    query = `SELECT * FROM videos ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`;
+  } else {
+    query = `SELECT * FROM videos WHERE duration <> 'ad' ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`;
+  }
+
+  try {
+    const all_videos = <VideoParams[]>(
+      (<unknown>await Pool_singleton.getInstance().query(query, {
+        type: QueryTypes.SELECT,
+        model: Video,
+        raw: true,
+      }))
+    );
+
+    const data = await Promise.all(
+      all_videos.map(async (video) => {
+        const likes = await like_controller.findAll({
+          where: {
+            video_id: video.id,
+          },
+        });
+        const views = await view_controller.findAll({
+          where: {
+            video_id: video.id,
+          },
+        });
+        const has_liked = like_controller.findOne({
+          where: { user_id: req.id, video_id: video.id },
+        });
+
+        const video_payload = Object.assign({}, video, {
+          likes: likes.length,
+          views: views.length,
+          has_liked: has_liked != null || has_liked != undefined,
+        });
+
+        const user = await user_controller.findOne({
+          where: { id: video.user_id },
+        });
+
+        const payload = {
+          video: video_payload,
+          user,
+        };
+
+        return payload;
+      })
+    );
+
+    res.status(200).json(data);
+  } catch (error) {
+    // res.status(500).send(error);
+    res.status(500).send("Could not fetch videos. Please try");
+    throw error;
+  }
+});
+
+async function createTags() {
+  const tags = [
+    "NEWLY UPLOADED",
+    "MOST VIEWED",
+    "TOP LIKED",
+    "GAMES",
+    "MOVIES",
+    "TV",
+  ];
+
+  tags.forEach(async (tag) => {
+    await tag_controller.findOrCreate({
+      where: { name: tag },
+      defaults: { name: tag },
+    });
+  });
+}
+
+async function fetchVideosByDate(
+  id: string,
+  limit: number,
+  offset: number
+) {
+  const videos = await video_controller.findAll({
+    limit,
+    offset,
+    order: [
+      ["createdAt", "DESC"]
+    ],
+  });
+
+  const data = await fetchVideosAndUsers(id, videos.map(item => item.id))
+  // return videos.flat()
+
+  return data
+}
+
+async function fetchVideosByLikes(
+  id: string,
+  limit: number,
+  offset: number
+) {
+
+  const query = `SELECT COUNT(video_id) as realcount, videos.* FROM videos LEFT JOIN likes ON videos.id=video_id GROUP BY videos.id,video_id ORDER BY realcount DESC OFFSET ${offset} LIMIT ${limit};`
+
+    const all_videos = <VideoParams[]>(
+      (<unknown>await Pool_singleton.getInstance().query(query, {
+        type: QueryTypes.SELECT,
+        model: Video,
+        raw: true,
+      })))
+
+  const data = await fetchVideosAndUsers(id, all_videos.map(item => item.id))
+  // return videos.flat()
+
+  return data
+}
+
+
+async function fetchVideosByViews(
+  id: string,
+  limit: number,
+  offset: number
+) {
+
+  const query = `SELECT COUNT(video_id) as realcount, videos.* FROM videos LEFT JOIN views ON videos.id=video_id GROUP BY videos.id,video_id ORDER BY realcount DESC OFFSET ${offset} LIMIT ${limit};`
+
+    const all_videos = <VideoParams[]>(
+      (<unknown>await Pool_singleton.getInstance().query(query, {
+        type: QueryTypes.SELECT,
+        model: Video,
+        raw: true,
+      })))
+
+  const data = await fetchVideosAndUsers(id, all_videos.map(item => item.id))
+  // return videos.flat()
+
+  return data
+}
+
+
+async function fetchVideosByCategory(
+  id: string,
+  category:string,
+  limit: number,
+  offset: number
+) {
+  const videos = await video_controller.findAll({
+    limit,
+    offset,
+    where:{
+      category
+    }
+  });
+
+  const data = await fetchVideosAndUsers(id, videos.map(item => item.id))
+  // return videos.flat()
+
+  return data
+}
+
+async function fetchVideosByTag(user_id:string, tag_id:string, limit:number, offset:number) {
+
+  const tag = await tag_controller.findOne({
+    where: { id: tag_id },
+  });
+
+  switch(tag?.name){
+    case "NEWLY UPLOADED":
+      const dataByDate = await fetchVideosByDate(user_id, limit, offset)
+      return dataByDate
+    
+    case "MOST VIEWED":
+    const dataByViews = await fetchVideosByViews(user_id,limit, offset)
+    return dataByViews
+
+    case "TOP LIKED":
+    const dataByLikes = await fetchVideosByLikes(user_id,limit, offset)
+    return dataByLikes
+
+    case "GAMES":
+    const dataByGames = await fetchVideosByCategory(user_id,"games",limit, offset)
+    return dataByGames
+        
+    case "MOVIES":
+    const dataByMovies = await fetchVideosByCategory(user_id,"movies",limit, offset)
+    return dataByMovies
+
+    case "TV":
+      const dataByTvShows = await fetchVideosByCategory(user_id,"tv",limit, offset)
+      return dataByTvShows
+
+    default:
+      return []
+  }
+}
+router.post(
+  "/upload",
+  validateVideoFields,
+  async (req: RequestInterface, res: Response) => {
+    const {
+      title,
+      description,
+      video_url,
+      thumbnail,
+      original_url,
+      duration,
+    } = req.body;
+
+    try {
+      const video = await video_controller.create({
+        title,
+        description,
+        video_url,
+        thumbnail,
+        original_url,
+        duration,
+        user_id: req.id,
+      });
+
+      await uploadNotificationPublisher(video.id, thumbnail, req.id!);
+      res.status(200).send("Uploaded");
+    } catch (exception) {
+      res.status(500).send(exception);
+    }
+  }
+);
+
+router.post(
+  "/upload/ad",
+  validateVideoFields,
+  async (req: RequestInterface, res: Response) => {
+    const { title, description, video_url, thumbnail, user_id } = req.body;
+
+    try {
+      const video = await video_controller.create({
+        title,
+        description,
+        video_url,
+        thumbnail,
+        original_url: "",
+        duration: "ad",
+        user_id,
+      });
+
+      await uploadNotificationPublisher(video.id, thumbnail, req.id!);
+      res.status(200).send("Ad Uploaded");
+    } catch (exception) {
+      res.status(500).send("An error occured");
+    }
+  }
+);
+
+
+async function updateVideoTags(){
+  const video1 = await video_controller.updateOne({
+    category:"movies"
+  }, {
+    where:{
+      id: "26e15e24-c507-44fb-944e-e3bd8b0401a0"
+    }
+  })
+
+  const video2 = await video_controller.updateOne({
+    category:"tvshow"
+  }, {
+    where:{
+      id: "602131e4-5293-4b58-9756-6460e5ad6542"
+    }
+  })
+
+  const video3 = await video_controller.updateOne({
+    category:"movies"
+  }, {
+    where:{
+      id: "cd63de52-587e-4339-b332-1773c96941b6"
+    }
+  })
+}
 
 export { uploadVideo, generateThumbnail, uploadImage };
 export default router;

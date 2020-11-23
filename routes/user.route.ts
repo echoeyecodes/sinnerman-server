@@ -16,6 +16,20 @@ import { VideoParams } from "../controllers/video.controller";
 
 const user_controller = new UserController();
 
+async function fetchUserFromVideo(users: string[]) {
+  const data = await Promise.all(
+    users.map(async (user_id) => {
+      const user = await user_controller.findOne({
+        where: {
+          id:user_id,
+        },
+      });
+      return user;
+    })
+  );
+  return data;
+}
+
 router.get("/", async (req: RequestInterface, res: Response) => {
   const id = req.params.id;
   try {
@@ -79,4 +93,6 @@ router.post("/upload", async (req: RequestInterface, res: Response) => {
     }
   });
 });
+
+export {fetchUserFromVideo}
 export default router;

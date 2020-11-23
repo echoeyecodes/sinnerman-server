@@ -49,6 +49,11 @@ Video.init({
         type: DataTypes.UUID,
         allowNull: false,
     },
+    category:{
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "games"
+    },
 }, {
     sequelize: instance,
     modelName: "videos",

@@ -32,23 +32,21 @@ async function validateVideoFields(
 ) {
   const form = new formidable.IncomingForm();
 
-  form.parse(req, async (err, fields: Fields, files: Files) => {
-    const path = files.video.path;
-    const { title, description } = <{ title: string; description: string }>(
-      fields
-    );
+  const { title, description, thumbnail,video_url, original_url, duration } = <{ title: string; description: string, video_url:string, original_url:string, thumbnail:string, duration:string }>(
+    req.body
+  );
 
-    const requiredparams = { title, description, path };
+  const requiredparams = { title, description, thumbnail, video_url, original_url, duration };
 
-    const missingParams = Object.entries(requiredparams)
-      .filter((entry) => [null, undefined, ""].includes(entry[1]))
-      .map((entry) => entry[0]);
+  const missingParams = Object.entries(requiredparams)
+    .filter((entry) => [null, undefined, ""].includes(entry[1]))
+    .map((entry) => entry[0]);
 
-    if (missingParams.length > 0) {
-      res.status(400).send();
-      throw new Error("Couldn't find parameters " + missingParams);
-    }
-  });
+  if (missingParams.length > 0) {
+    res.status(400).json(missingParams);
+    throw new Error("Couldn't find parameters " + missingParams);
+  }
+
   next();
 }
 
