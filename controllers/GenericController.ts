@@ -1,4 +1,4 @@
-import { BuildOptions, DestroyOptions,SaveOptions, FindOptions, FindOrCreateOptions, Model, ModelCtor, UpdateOptions } from "sequelize/types";
+import { BuildOptions, DestroyOptions,SaveOptions, FindOptions, FindOrCreateOptions, Model, ModelCtor, UpdateOptions, CountOptions } from "sequelize/types";
 
 interface GenericFunctions<T> {
   create(params: {}, options?: SaveOptions): Promise<T>,
@@ -6,7 +6,8 @@ interface GenericFunctions<T> {
   destroy (attributes: DestroyOptions): Promise<number>,
   findOrCreate (params:FindOrCreateOptions) : Promise<[T, boolean]>,
   findAll (attributes: FindOptions) : Promise<T[]>,
-  findOne (attributes: FindOptions): Promise<T | null>
+  findOne (attributes: FindOptions): Promise<T | null>,
+  getCount(countOptions: CountOptions): Promise<number>
 }
 
 class GenericController<T, U extends Model> implements GenericFunctions<T> {
@@ -47,6 +48,11 @@ class GenericController<T, U extends Model> implements GenericFunctions<T> {
   async findOne(attributes: FindOptions): Promise<T | null> {
     const new_model = await this.model.findOne({...attributes});
     return new_model?.get();
+  }
+
+  async getCount(countOptions: CountOptions): Promise<number> {
+    const count = await this.model.count(countOptions)
+    return count
   }
 
 }

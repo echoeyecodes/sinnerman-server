@@ -121,10 +121,8 @@ function generateThumbnail(path: string) {
 }
 
 async function getVideoViews(video_id: string) {
-  return await view_controller.findAll({
-    where: {
-      video_id,
-    },
+  return await view_controller.getCount({
+    where: { video_id },
   });
 }
 
@@ -137,10 +135,8 @@ async function getVideoUser(user_id: string) {
 }
 
 async function getVideoLikes(video_id: string) {
-  return await like_controller.findAll({
-    where: {
-      video_id,
-    },
+  return await like_controller.getCount({
+    where: { video_id  },
   });
 }
 
@@ -150,24 +146,19 @@ async function hasUserLiked(user_id: string, video_id: string) {
   });
 }
 
-async function fetchVideosAndUsers(id: string, videos: string[]) {
-  const data = await Promise.all(
-    videos.map(async (video_id) => {
-      const video = await video_controller.findOne({ where: { id: video_id } });
-      const user = await user_controller.findOne({
-        where: {
-          id: video?.user_id,
-        },
-      });
+async function fetchVideoData(id: string, video: VideoParams) {
+      const user = await getVideoUser(video.user_id)
 
-      const likes = await getVideoLikes(video_id);
-      const views = await getVideoViews(video_id);
-      const has_liked = await hasUserLiked(id, video_id);
+      const newVideo = video
 
-      const video_payload = Object.assign({}, video, {
-        likes: likes.length,
-        views: views.length,
-        has_liked: has_liked != null || has_liked != undefined,
+      const likes = await getVideoLikes(video.id);
+      const views = await getVideoViews(video.id);
+      const has_liked = await hasUserLiked(id, video.id);
+
+      const video_payload = Object.assign({}, newVideo, {
+        likes,
+        views,
+        has_liked: has_liked != null,
       });
 
       const payload = {
@@ -176,60 +167,6 @@ async function fetchVideosAndUsers(id: string, videos: string[]) {
       };
 
       return payload;
-    })
-  );
-  return data;
-}
-
-async function fetchVideosFromTag(id: string, all_tags: TagParams[]) {
-  const data = await Promise.all(
-    all_tags.map(async (tag) => {
-      const tags = await video_tag_controller.findAll({
-        where: { tag_id: tag.id },
-        offset: 0,
-        limit: 4,
-      });
-
-      const related_videos = await fetchVideosAndUsers(
-        id,
-        tags.map((item) => item.video_id)
-      );
-      return { name: tag.name, id: tag.id, videos: related_videos.flat() };
-      // return videos.flat()
-    })
-  );
-
-  return data;
-}
-
-async function fetchVideosFromSingleTag(
-  id: string,
-  tag: TagParams,
-  limit: number,
-  offset: number
-) {
-  const tags = await video_tag_controller.findAll({
-    where: { tag_id: tag.id },
-    limit,
-    offset,
-  });
-  const data = await Promise.all(
-    tags.map(async (t) => {
-      const videos = await video_controller.findAll({
-        where: { id: t.video_id },
-      });
-
-      const related_videos = await fetchVideosAndUsers(
-        id,
-        videos.map((item) => item.id)
-      );
-
-      return related_videos;
-    })
-  );
-  // return videos.flat()
-
-  return data.flat();
 }
 
 // router.post(
@@ -343,15 +280,13 @@ router.get(
       });
 
       const user = await user_controller.findOne({ where: { id: user_id } });
-      const likes = await like_controller.findAll({ where: { video_id: id } });
-      const views = await view_controller.findAll({ where: { video_id: id } });
-      const has_liked = await like_controller.findOne({
-        where: { user_id: req.id, video_id: id },
-      });
+      const likes = await getVideoLikes(id)
+      const views = await getVideoViews(id)
+      const has_liked = await hasUserLiked(req.id!, id)
 
       const video_payload = Object.assign({}, video, {
-        likes: likes.length,
-        views: views.length,
+        likes: likes,
+        views: views,
         has_liked: has_liked != null,
       });
 
@@ -367,94 +302,6 @@ router.get(
   }
 );
 
-// router.get("/", async (req: RequestInterface, res: Response) => {
-//   type Params = {
-//     limit: string;
-//     offset: string;
-//   };
-
-//   const { limit = "20", offset = "0" } = <Params>req.query;
-//   let now = moment().unix();
-
-//   const user = await user_activity_controller.findOrCreate({
-//     where: {
-//       user_id: req.id,
-//     },
-//     defaults: {
-//       user_id: req.id,
-//     },
-//   });
-
-//   if (offset == "0") {
-//     await user_activity_controller.updateOne(
-//       {
-//         last_video_timestamp: now,
-//       },
-//       {
-//         where: {
-//           user_id: req.id,
-//         },
-//       }
-//     );
-//   } else {
-//     now = user[0].last_video_timestamp;
-//   }
-
-//   const order = `(CAST(extract(epoch from "createdAt") as integer) - ${now}) % 181`;
-
-//   try {
-//     const all_videos = <VideoParams[]>(
-//       (<unknown>await Pool_singleton.getInstance().query(
-//         `SELECT * FROM videos ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`,
-//         {
-//           type: QueryTypes.SELECT,
-//           model: Video,
-//           raw: true,
-//         }
-//       ))
-//     );
-
-//     const data = await Promise.all(
-//       all_videos.map(async (video) => {
-
-//         const likes = await like_controller.findAll({
-//           where: {
-//             video_id:video.id,
-//           },
-//         });
-//         const views = await view_controller.findAll({
-//           where: {
-//             video_id:video.id,
-//           },
-//         });
-//         const has_liked = like_controller.findOne({where:{user_id:req.id, video_id: video.id}})
-
-//         const video_payload = Object.assign({}, video, {
-//           likes: likes.length,
-//           views: views.length,
-//           has_liked: has_liked != null || has_liked != undefined,
-//         });
-
-//         const user = await user_controller.findOne({
-//           where: { id: video.user_id },
-//         });
-
-//         const payload = {
-//           video: video_payload,
-//           user,
-//         };
-
-//         return payload;
-//       })
-//     );
-
-//     res.status(200).json(data);
-//   } catch (error) {
-//     // res.status(500).send(error);
-//     res.status(500).send("Could not fetch videos. Please try");
-//     throw error;
-//   }
-// });
 
 router.get(
   "/activity/:context",
@@ -469,32 +316,11 @@ router.get(
     try {
       switch (req.params.context) {
         case "likes":
-          const likes = await like_controller.findAll({
-            where: {
-              user_id: req.id,
-            },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-          });
-
-          const all_liked_videos = await fetchVideosAndUsers(
-            req.id!,
-            likes.map((item) => item.video_id)
-          );
+          const all_liked_videos = await fetchUserVideoActivity(req.id!, "likes", parseInt(limit), parseInt(offset))
           return res.status(200).json(all_liked_videos);
 
         case "history":
-          const history = await view_controller.findAll({
-            where: {
-              user_id: req.id,
-            },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-          });
-          const all_video_history = await fetchVideosAndUsers(
-            req.id!,
-            history.map((item) => item.video_id)
-          );
+          const all_video_history = await fetchUserVideoActivity(req.id!, "views", parseInt(limit), parseInt(offset));
           return res.status(200).json(all_video_history);
 
         default:
@@ -524,7 +350,7 @@ router.get("/explore/tags", async (req: RequestInterface, res: Response) => {
     });
 
     const data = await Promise.all(all_tags.reverse().map( async (item) =>{
-      const videos = await fetchVideosByTag(req.id!, item.id, 10, 0)
+      const videos = await fetchVideosByTag(req.id!, item.id, (req.version) ? 10 : 4, 0)
       return {
         id: item.id,
         name: item.name,
@@ -614,40 +440,7 @@ router.get("/", async (req: RequestInterface, res: Response) => {
       }))
     );
 
-    const data = await Promise.all(
-      all_videos.map(async (video) => {
-        const likes = await like_controller.findAll({
-          where: {
-            video_id: video.id,
-          },
-        });
-        const views = await view_controller.findAll({
-          where: {
-            video_id: video.id,
-          },
-        });
-        const has_liked = like_controller.findOne({
-          where: { user_id: req.id, video_id: video.id },
-        });
-
-        const video_payload = Object.assign({}, video, {
-          likes: likes.length,
-          views: views.length,
-          has_liked: has_liked != null || has_liked != undefined,
-        });
-
-        const user = await user_controller.findOne({
-          where: { id: video.user_id },
-        });
-
-        const payload = {
-          video: video_payload,
-          user,
-        };
-
-        return payload;
-      })
-    );
+    const data = await Promise.all(all_videos.map(async(item) => await fetchVideoData(req.id!, item)))
 
     res.status(200).json(data);
   } catch (error) {
@@ -688,7 +481,7 @@ async function fetchVideosByDate(
     ],
   });
 
-  const data = await fetchVideosAndUsers(id, videos.map(item => item.id))
+  const data = await Promise.all(videos.map(async(item) => await fetchVideoData(id, item)))
   // return videos.flat()
 
   return data
@@ -709,7 +502,32 @@ async function fetchVideosByLikes(
         raw: true,
       })))
 
-  const data = await fetchVideosAndUsers(id, all_videos.map(item => item.id))
+    const data = await Promise.all(all_videos.map(async (item) => await fetchVideoData(id, item)))
+  // return videos.flat()
+
+  return data
+}
+
+
+async function fetchUserVideoActivity(
+  id: string,
+  activity:string,
+  limit: number,
+  offset: number
+) {
+
+  const query = `SELECT videos.* FROM videos INNER JOIN ${activity} ON ${activity}.video_id=videos.id AND ${activity}.user_id='${id}' ORDERY BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
+
+    const all_videos = <VideoParams[]>(
+      (<unknown>await Pool_singleton.getInstance().query(query, {
+        type: QueryTypes.SELECT,
+        model: Video,
+        raw: true,
+      })))
+
+  const data = await Promise.all(all_videos.map(async (item) =>{
+      return await fetchVideoData(id, item)
+  }))
   // return videos.flat()
 
   return data
@@ -731,7 +549,7 @@ async function fetchVideosByViews(
         raw: true,
       })))
 
-  const data = await fetchVideosAndUsers(id, all_videos.map(item => item.id))
+  const data = await Promise.all(all_videos.map(async(item) => await fetchVideoData(id, item)))
   // return videos.flat()
 
   return data
@@ -740,19 +558,21 @@ async function fetchVideosByViews(
 
 async function fetchVideosByCategory(
   id: string,
-  category:string,
+  tag_id:string,
   limit: number,
   offset: number
 ) {
-  const videos = await video_controller.findAll({
-    limit,
-    offset,
-    where:{
-      category
-    }
-  });
 
-  const data = await fetchVideosAndUsers(id, videos.map(item => item.id))
+  const query = `SELECT videos.* FROM videos INNER JOIN video_tags ON videos.id=video_id WHERE videos.id=video_id AND tag_id='${tag_id}' ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
+
+  const all_videos = <VideoParams[]>(
+    (<unknown>await Pool_singleton.getInstance().query(query, {
+      type: QueryTypes.SELECT,
+      model: Video,
+      raw: true,
+    })))
+
+  const data = await Promise.all(all_videos.map(async(item) => await fetchVideoData(id, item)))
   // return videos.flat()
 
   return data
@@ -778,16 +598,10 @@ async function fetchVideosByTag(user_id:string, tag_id:string, limit:number, off
     return dataByLikes
 
     case "GAMES":
-    const dataByGames = await fetchVideosByCategory(user_id,"games",limit, offset)
-    return dataByGames
-        
     case "MOVIES":
-    const dataByMovies = await fetchVideosByCategory(user_id,"movies",limit, offset)
-    return dataByMovies
-
     case "TV":
-      const dataByTvShows = await fetchVideosByCategory(user_id,"tv",limit, offset)
-      return dataByTvShows
+    const dataByCategory = await fetchVideosByCategory(user_id,tag.id,limit, offset)
+    return dataByCategory
 
     default:
       return []

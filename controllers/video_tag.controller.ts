@@ -6,7 +6,7 @@ interface VideoTagParams {
   tag_id:string,
 }
 
-class TagController extends GenericController<VideoTagParams, Video_Tags> {
+class VideoTagController extends GenericController<VideoTagParams, Video_Tags> {
 
     constructor(){
         super(Video_Tags)
@@ -15,4 +15,4 @@ class TagController extends GenericController<VideoTagParams, Video_Tags> {
 }
 
 
-export default TagController 
+export default VideoTagController 

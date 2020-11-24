@@ -12,7 +12,8 @@ interface VideoParams{
     tags?: string,
     thumbnail: string,
     original_url:string,
-    duration:string
+    duration:string,
+    category:string
 }
 
 
