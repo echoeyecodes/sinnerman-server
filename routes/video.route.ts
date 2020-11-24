@@ -479,6 +479,9 @@ async function fetchVideosByDate(
     order: [
       ["createdAt", "DESC"]
     ],
+    where:{
+      duration: {[Op.ne]: "ad" }
+    }
   });
 
   const data = await Promise.all(videos.map(async(item) => await fetchVideoData(id, item)))
@@ -646,7 +649,7 @@ router.post(
     const { title, description, video_url, thumbnail, user_id } = req.body;
 
     try {
-      const video = await video_controller.create({
+     await video_controller.create({
         title,
         description,
         video_url,
@@ -655,8 +658,6 @@ router.post(
         duration: "ad",
         user_id,
       });
-
-      await uploadNotificationPublisher(video.id, thumbnail, req.id!);
       res.status(200).send("Ad Uploaded");
     } catch (exception) {
       res.status(500).send("An error occured");
