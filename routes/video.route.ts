@@ -519,7 +519,7 @@ async function fetchUserVideoActivity(
   offset: number
 ) {
 
-  const query = `SELECT videos.* FROM videos INNER JOIN ${activity} ON ${activity}.video_id=videos.id AND ${activity}.user_id='${id}' ORDERY BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
+  const query = `SELECT videos.* FROM videos INNER JOIN ${activity} ON ${activity}.video_id=videos.id AND ${activity}.user_id='${id}' ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
 
     const all_videos = <VideoParams[]>(
       (<unknown>await Pool_singleton.getInstance().query(query, {
