@@ -29,7 +29,7 @@ router.get("/", async (req: RequestInterface, res: Response) => {
 
     const data = await Promise.all(notifications.map(async(item) =>{
         const video = await video_controller.findOne({where:{id: item.video_id}})
-        const user = await user_controller.findOne({where:{id: item.created_by}})
+        const user = await user_controller.findOne({where:{id: video?.user_id}})
 
         const title = video?.title
         const thumbnail = item.thumbnail
