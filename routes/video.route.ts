@@ -15,9 +15,9 @@ import {
 } from "cloudinary";
 import moment from "moment";
 import { uploadNotificationPublisher } from "../pubsubs/publishers";
-import VideoController, { VideoParams } from "../controllers/video.controller";
+import VideoController, { FormattedVideoParams, NestedVideoQueryParams, VideoDetails, VideoParams } from "../controllers/video.controller";
 import ViewController from "../controllers/view.controller";
-import UserController from "../controllers/user.controller";
+import UserController, { UserParams } from "../controllers/user.controller";
 import LikeController from "../controllers/like.controller";
 import UserActivityController from "../controllers/user_activity.controller";
 import VideoTagController from "../controllers/video_tag.controller";
@@ -389,6 +389,41 @@ router.get(
   }
 );
 
+
+function getVideoDetails(payload: NestedVideoQueryParams[]){
+    return payload.map((item) =>{
+      const user: UserParams = {
+        fullname: item.fullname,
+        profile_url: item.profile_url,
+        username: item.username,
+        id: item.author_id,
+        email: item.email,
+        is_verified: item.is_verified,
+        password: "",
+        updatedAt: item.createdAt,
+        createdAt: item.createdAt
+      }
+
+      const video : VideoDetails ={
+        id: item.id,
+        description: item.description,
+        duration: item.duration,
+        likes: item.likes,
+        views: item.views,
+        createdAt: item.createdAt,
+        updatedAt: item.createdAt,
+        has_liked: (item.has_liked > 0),
+        original_url: item.original_url,
+        title: item.title,
+        thumbnail: item.thumbnail,
+        user_id: item.user_id,
+        video_url: item.video_url,
+        tags: "",
+      }
+
+      return {user, video}
+    })
+}
 router.get("/", async (req: RequestInterface, res: Response) => {
   type Params = {
     limit: string;
@@ -422,25 +457,30 @@ router.get("/", async (req: RequestInterface, res: Response) => {
     now = user[0].last_video_timestamp;
   }
 
-  const order = `(CAST(extract(epoch from "createdAt") as integer) - ${now}) % 181`;
+  const order = `(CAST(extract(epoch from videos."createdAt") as integer) - ${now}) % 181`;
 
   let query;
   if (req.version) {
-    query = `SELECT * FROM videos ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`;
+    query = `SELECT videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE video_id=videos.id AND user_id ='${req.id}') FROM videos INNER JOIN users ON videos.user_id=users.id ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`;
   } else {
-    query = `SELECT * FROM videos WHERE duration <> 'ad' ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`;
+    query = `SELECT videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE video_id=videos.id AND user_id ='${req.id}') FROM videos INNER JOIN users ON videos.user_id=users.id WHERE duration <> 'ad' ORDER BY ${order} OFFSET ${offset} LIMIT ${limit};`;
   }
 
   try {
-    const all_videos = <VideoParams[]>(
-      (<unknown>await Pool_singleton.getInstance().query(query, {
+    const all_videos = <NestedVideoQueryParams[]> (<unknown> await Pool_singleton.getInstance().query(query, {
         type: QueryTypes.SELECT,
-        model: Video,
         raw: true,
       }))
-    );
 
-    const data = await Promise.all(all_videos.map(async(item) => await fetchVideoData(req.id!, item)))
+    // const data = await Promise.all(all_videos.map(async(item) => {
+    //   const user = await user_controller.findOne({where:{id: item.user_id}})
+    //   return {
+    //     video: item,
+    //     user
+    //   }
+    // }))
+
+    const data : FormattedVideoParams[] = getVideoDetails(all_videos)
 
     res.status(200).json(data);
   } catch (error) {
@@ -473,18 +513,16 @@ async function fetchVideosByDate(
   limit: number,
   offset: number
 ) {
-  const videos = await video_controller.findAll({
-    limit,
-    offset,
-    order: [
-      ["createdAt", "DESC"]
-    ],
-    where:{
-      duration: {[Op.ne]: "ad" }
-    }
-  });
 
-  const data = await Promise.all(videos.map(async(item) => await fetchVideoData(id, item)))
+  const query = `SELECT videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE video_id=videos.id AND user_id ='${id}') FROM videos INNER JOIN users ON videos.user_id=users.id WHERE duration <> 'ad' GROUP BY videos.id,users.id ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
+
+  const all_videos = <NestedVideoQueryParams[]>(
+    (<unknown>await Pool_singleton.getInstance().query(query, {
+      type: QueryTypes.SELECT,
+      raw: true,
+    })))
+
+  const data = getVideoDetails(all_videos)
   // return videos.flat()
 
   return data
@@ -496,16 +534,15 @@ async function fetchVideosByLikes(
   offset: number
 ) {
 
-  const query = `SELECT COUNT(video_id) as realcount, videos.* FROM videos LEFT JOIN likes ON videos.id=video_id GROUP BY videos.id,video_id ORDER BY realcount DESC OFFSET ${offset} LIMIT ${limit};`
+  const query = `SELECT COUNT(video_id) AS realcount, videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE video_id=videos.id AND user_id ='${id}') FROM videos INNER JOIN users ON videos.user_id=users.id LEFT JOIN likes ON videos.id=video_id GROUP BY videos.id,video_id,users.id ORDER BY realcount DESC OFFSET ${offset} LIMIT ${limit};`
 
-    const all_videos = <VideoParams[]>(
+    const all_videos = <NestedVideoQueryParams[]>(
       (<unknown>await Pool_singleton.getInstance().query(query, {
         type: QueryTypes.SELECT,
-        model: Video,
         raw: true,
       })))
 
-    const data = await Promise.all(all_videos.map(async (item) => await fetchVideoData(id, item)))
+    const data = getVideoDetails(all_videos)
   // return videos.flat()
 
   return data
@@ -519,18 +556,16 @@ async function fetchUserVideoActivity(
   offset: number
 ) {
 
-  const query = `SELECT videos.* FROM videos INNER JOIN ${activity} ON ${activity}.video_id=videos.id AND ${activity}.user_id='${id}' ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
+  const query = `SELECT COUNT(video_id) AS realcount, videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE video_id=videos.id AND user_id ='${id}') FROM videos INNER JOIN users ON videos.user_id=users.id INNER JOIN ${activity} ON ${activity}.video_id=videos.id AND ${activity}.user_id='${id}' GROUP BY videos.title, videos.id, users.id ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
 
-    const all_videos = <VideoParams[]>(
+    const all_videos = <NestedVideoQueryParams[]>(
       (<unknown>await Pool_singleton.getInstance().query(query, {
         type: QueryTypes.SELECT,
         model: Video,
         raw: true,
       })))
 
-  const data = await Promise.all(all_videos.map(async (item) =>{
-      return await fetchVideoData(id, item)
-  }))
+  const data = getVideoDetails(all_videos)
   // return videos.flat()
 
   return data
@@ -543,17 +578,15 @@ async function fetchVideosByViews(
   offset: number
 ) {
 
-  const query = `SELECT COUNT(video_id) as realcount, videos.* FROM videos LEFT JOIN views ON videos.id=video_id GROUP BY videos.id,video_id ORDER BY realcount DESC OFFSET ${offset} LIMIT ${limit};`
+  const query = `SELECT COUNT(video_id) AS realcount, videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE video_id=videos.id AND user_id ='${id}') FROM videos INNER JOIN users ON videos.user_id=users.id LEFT JOIN views ON videos.id=video_id GROUP BY videos.id,video_id, users.id ORDER BY realcount DESC OFFSET ${offset} LIMIT ${limit};`
 
-    const all_videos = <VideoParams[]>(
+    const all_videos = <NestedVideoQueryParams[]>(
       (<unknown>await Pool_singleton.getInstance().query(query, {
         type: QueryTypes.SELECT,
-        model: Video,
         raw: true,
       })))
 
-  const data = await Promise.all(all_videos.map(async(item) => await fetchVideoData(id, item)))
-  // return videos.flat()
+  const data = getVideoDetails(all_videos)
 
   return data
 }
@@ -566,16 +599,16 @@ async function fetchVideosByCategory(
   offset: number
 ) {
 
-  const query = `SELECT videos.* FROM videos INNER JOIN video_tags ON videos.id=video_id WHERE videos.id=video_id AND tag_id='${tag_id}' ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
+  const query = `SELECT COUNT(video_id) AS realcount, videos.*, users.id AS author_id, fullname, username, profile_url,email,is_verified, (SELECT COUNT(views.*) AS views FROM views WHERE videos.id=views.video_id), (SELECT COUNT(likes.*) AS likes FROM likes WHERE likes.video_id=videos.id), (SELECT COUNT(*) AS has_liked FROM likes WHERE videos.id=video_id AND user_id ='${id}') FROM videos INNER JOIN users ON videos.user_id=users.id INNER JOIN video_tags ON videos.id=video_id WHERE videos.id=video_id AND tag_id='${tag_id}' GROUP BY videos.title, videos.id, users.id ORDER BY "createdAt" DESC OFFSET ${offset} LIMIT ${limit};`
 
-  const all_videos = <VideoParams[]>(
+  const all_videos = <NestedVideoQueryParams[]>(
     (<unknown>await Pool_singleton.getInstance().query(query, {
       type: QueryTypes.SELECT,
       model: Video,
       raw: true,
     })))
 
-  const data = await Promise.all(all_videos.map(async(item) => await fetchVideoData(id, item)))
+  const data = getVideoDetails(all_videos)
   // return videos.flat()
 
   return data

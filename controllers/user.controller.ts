@@ -9,7 +9,8 @@ interface UserParams {
   is_verified:boolean,
   id: string,
   profile_url:string,
-  updatedAt:string
+  updatedAt:string,
+  createdAt:string
 }
 
 class UserController extends GenericController<UserParams, User> {
@@ -20,4 +21,5 @@ class UserController extends GenericController<UserParams, User> {
     
 }
 
+export {UserParams}
 export default UserController;
